@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Suite</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles/main.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Navigation Sidebar -->
+    <nav id="sidebar">
+      <div class="sidebar-header">
+        <h1>CREATIVE<br>SUITE</h1>
+        <div class="version">v1.0</div>
+      </div>
+      
+      <div class="tools-list">
+        <button class="tool-btn active" data-tool="dither">
+          <span class="tool-icon">◈</span>
+          <div class="tool-info">
+            <span class="tool-name">DITHR</span>
+            <span class="tool-desc">Image dithering & effects</span>
+          </div>
+        </button>
+        
+        <button class="tool-btn" data-tool="flake">
+          <span class="tool-icon">◉</span>
+          <div class="tool-info">
+            <span class="tool-name">FLAKE</span>
+            <span class="tool-desc">Generative grid patterns</span>
+          </div>
+        </button>
+        
+        <button class="tool-btn" data-tool="refract">
+          <span class="tool-icon">◊</span>
+          <div class="tool-info">
+            <span class="tool-name">REFRACT</span>
+            <span class="tool-desc">Image displacement</span>
+          </div>
+        </button>
+        
+        <button class="tool-btn" data-tool="split">
+          <span class="tool-icon">▣</span>
+          <div class="tool-info">
+            <span class="tool-name">SPLITX</span>
+            <span class="tool-desc">Vector art duplication</span>
+          </div>
+        </button>
+        
+        <button class="tool-btn" data-tool="textr">
+          <span class="tool-icon">A</span>
+          <div class="tool-info">
+            <span class="tool-name">TEXTR</span>
+            <span class="tool-desc">Typography generator</span>
+          </div>
+        </button>
+        
+        <button class="tool-btn" data-tool="rhythm">
+          <span class="tool-icon">♪</span>
+          <div class="tool-info">
+            <span class="tool-name">RITM</span>
+            <span class="tool-desc">Rhythm visualizer</span>
+          </div>
+        </button>
+      </div>
+      
+      <div class="sidebar-footer">
+        <div class="keyboard-hint">
+          <kbd>⌘</kbd> + <kbd>1-6</kbd> switch tools
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="main-content">
+      <!-- Tool Container - Each tool gets rendered here -->
+      <div id="tool-container">
+        <div id="canvas-wrapper"></div>
+        <div id="pane-wrapper"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Hidden file input for file uploads -->
+  <input type="file" id="fileInput" style="display: none;" />
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

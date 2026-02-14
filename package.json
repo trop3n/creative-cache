@@ -1,0 +1,76 @@
+{
+  "name": "creative-suite",
+  "version": "1.0.0",
+  "description": "Creative Suite - A unified collection of creative tools for generative art and design",
+  "author": "Your Name",
+  "license": "MIT",
+  "main": "electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:electron": "NODE_ENV=development electron .",
+    "build": "vite build",
+    "build:electron": "vite build && electron-builder",
+    "preview": "vite preview",
+    "lint": "eslint . --ext .js",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "p5": "^2.2.1",
+    "paper": "^0.12.18",
+    "simplex-noise": "^4.0.3",
+    "tweakpane": "^4.0.5"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "vite": "^5.0.0"
+  },
+  "build": {
+    "appId": "com.yourcompany.creative-suite",
+    "productName": "Creative Suite",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        }
+      ],
+      "category": "Graphics"
+    }
+  },
+  "keywords": [
+    "creative",
+    "generative-art",
+    "p5js",
+    "paperjs",
+    "dithering",
+    "typography",
+    "rhythm",
+    "electron"
+  ]
+}

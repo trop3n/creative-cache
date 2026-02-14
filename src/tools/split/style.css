@@ -1,0 +1,128 @@
+:root {
+  --bg-color: #1a1a1a;
+  --panel-bg: #252525;
+  --border-color: #333;
+  --text-color: #e0e0e0;
+  --accent-color: #4a9eff;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#app {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+#canvas-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: 
+    linear-gradient(45deg, #222 25%, transparent 25%),
+    linear-gradient(-45deg, #222 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #222 75%),
+    linear-gradient(-45deg, transparent 75%, #222 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  background-color: #111;
+}
+
+#canvas-container.drag-over {
+  background-color: rgba(74, 158, 255, 0.1);
+  border: 2px dashed var(--accent-color);
+}
+
+#canvas-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
+#paper-canvas {
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+#pane-container {
+  width: 340px;
+  min-width: 340px;
+  height: 100vh;
+  overflow-y: auto;
+  background: var(--panel-bg);
+  border-left: 1px solid var(--border-color);
+}
+
+/* Tweakpane custom styling */
+.tp-dfwv {
+  width: 100% !important;
+}
+
+.tp-rotv {
+  background: var(--panel-bg) !important;
+}
+
+.tp-fldv > .tp-fldv_c > .tp-cntv {
+  border-left: 1px solid var(--border-color) !important;
+}
+
+/* Scrollbar styling */
+#pane-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+#pane-container::-webkit-scrollbar-track {
+  background: var(--panel-bg);
+}
+
+#pane-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+#pane-container::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Drag overlay */
+.drag-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px 40px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px dashed var(--accent-color);
+  border-radius: 8px;
+  color: var(--accent-color);
+  font-size: 18px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 100;
+}
+
+.drag-over .drag-overlay {
+  opacity: 1;
+}
