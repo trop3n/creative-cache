@@ -3,10 +3,20 @@
 // ============================================================
 
 import p5 from 'p5';
-import { vertShader, fragShader } from './shaders.js';
-import { cnv, params, media, presets } from './state.js';
+import { vertShader, displacementFrag as fragShader } from './shaders.js';
+import { canvas as cnv, distortion, media } from './state.js';
 import { setupUI, refreshUI } from './ui.js';
 import { setupMedia } from './media.js';
+
+// Flat compatibility shim so the rest of the adapter code is unchanged.
+const typeToMode = { displacement: 0, refraction: 1, ripple: 2, wave: 3, pinch: 4, twirl: 5, lens: 6, barrel: 7 };
+const params = {
+  get strength() { return distortion.amount; },
+  get scale()    { return distortion.scale; },
+  get offsetX()  { return distortion.displacement?.offsetX ?? 0; },
+  get offsetY()  { return distortion.displacement?.offsetY ?? 0; },
+  get mode()     { return typeToMode[distortion.type] ?? 0; },
+};
 
 export async function loadRefractTool(canvasContainer, paneContainer) {
   let p5Instance = null;

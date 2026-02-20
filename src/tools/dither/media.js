@@ -5,23 +5,13 @@
 import { media } from './state.js';
 
 /**
- * Set up all media input handlers.
+ * Set up drag-and-drop media input on the canvas container.
+ * File input changes are handled globally by src/main.js which calls handleFile directly.
  * @param {p5} p - p5 instance
  * @param {Function} onLoaded - callback(type, source) when media is loaded
  */
 export function setupMedia(p, onLoaded) {
-  const fileInput = document.getElementById('fileInput');
-  const container = document.getElementById('canvas-container');
-
-  // File input handler
-  if (fileInput) {
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleFile(p, file, onLoaded);
-      // Reset so same file can be re-selected
-      fileInput.value = '';
-    });
-  }
+  const container = document.getElementById('canvas-wrapper');
 
   // Drag and drop on canvas container
   if (container) {
@@ -49,8 +39,9 @@ export function setupMedia(p, onLoaded) {
 
 /**
  * Handle a File object - determine if image or video and load it.
+ * Exported so index.js can call it directly from the tool's handleFile callback.
  */
-function handleFile(p, file, onLoaded) {
+export function handleFile(p, file, onLoaded) {
   const type = file.type;
   media.fileName = file.name;
 

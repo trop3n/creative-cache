@@ -8,7 +8,7 @@ import { matrixTypes, matrixToImage, generateNoiseTextures, createFlatTexture } 
 import { getActiveColors } from './palettes.js';
 import { cnv, dither, gradient, ascii, media, rec, resolutions } from './state.js';
 import { setupUI, refreshUI } from './ui.js';
-import { setupMedia } from './media.js';
+import { setupMedia, handleFile as handleFileMedia } from './media.js';
 
 /** Parse hex color string to normalized [r, g, b] array (0-1 range). */
 function hexToRGB(hex) {
@@ -75,7 +75,7 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
       
       setupMedia(p, fileHandler);
       
-      uiInstance = setupUI(p, {
+      uiInstance = setupUI(paneContainer, p, {
         onParamChange: () => {},
         onResize: () => { needsResize = true; },
         onFontChange: handleFontChange,
@@ -482,14 +482,7 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
     p5Instance,
     uiInstance,
     handleFile: (file) => {
-      // File handling is done through the media.js module
-      const input = document.getElementById('fileInput');
-      if (input) {
-        const dataTransfer = new DataTransfer();
-        dataTransfer.items.add(file);
-        input.files = dataTransfer.files;
-        input.dispatchEvent(new Event('change'));
-      }
+      if (fileHandler) handleFileMedia(p5Instance, file, fileHandler);
     }
   };
 }

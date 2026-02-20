@@ -46,10 +46,10 @@ let statusMonitor = null;
 
 /**
  * Set up the entire Tweakpane panel.
+ * @param {HTMLElement} container - The pane wrapper element to mount into
  */
-export function setupUI(p, cbs) {
+export function setupUI(container, p, cbs) {
   callbacks = cbs;
-  const container = document.getElementById('pane-container');
   if (!container) return;
 
   pane = new Pane({

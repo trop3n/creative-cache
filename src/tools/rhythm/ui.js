@@ -15,12 +15,13 @@ let callbacks = {};
 
 /**
  * Set up the entire Tweakpane panel
+ * @param {HTMLElement} container - pane container element
  * @param {Object} cbs - callback functions
+ * @returns {Pane}
  */
-export function setupUI(cbs) {
+export function setupUI(container, cbs) {
   callbacks = cbs;
-  const container = document.getElementById('pane-container');
-  if (!container) return;
+  if (!container) return null;
 
   pane = new Pane({
     container,
@@ -341,8 +342,7 @@ export function setupUI(cbs) {
     toggleFullscreen();
   });
 
-  // Setup keyboard shortcuts
-  setupKeyboardShortcuts();
+  return pane;
 }
 
 /**
@@ -375,35 +375,6 @@ function toggleFullscreen() {
   } else {
     document.exitFullscreen();
   }
-}
-
-/**
- * Set up keyboard shortcuts
- */
-function setupKeyboardShortcuts() {
-  document.addEventListener('keydown', (e) => {
-    // Space to play/pause
-    if (e.code === 'Space' && !e.target.matches('input, textarea')) {
-      e.preventDefault();
-      animation.playing = !animation.playing;
-      pane.refresh();
-      callbacks.onAnimationChange?.();
-    }
-    
-    // Shift+R to randomize
-    if (e.code === 'KeyR' && e.shiftKey) {
-      randomizeAll();
-      generatePalette();
-      pane.refresh();
-      callbacks.onParamChange?.();
-    }
-    
-    // Ctrl+S to export
-    if (e.code === 'KeyS' && e.ctrlKey) {
-      e.preventDefault();
-      callbacks.onExport?.();
-    }
-  });
 }
 
 /**

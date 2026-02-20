@@ -101,7 +101,8 @@ function createApplicationMenu() {
             { label: 'REFRACT', accelerator: 'CmdOrCtrl+3', click: () => switchTool('refract') },
             { label: 'SPLITX', accelerator: 'CmdOrCtrl+4', click: () => switchTool('split') },
             { label: 'TEXTR', accelerator: 'CmdOrCtrl+5', click: () => switchTool('textr') },
-            { label: 'RITM', accelerator: 'CmdOrCtrl+6', click: () => switchTool('rhythm') }
+            { label: 'RITM',  accelerator: 'CmdOrCtrl+6', click: () => switchTool('rhythm') },
+            { label: 'BOIDS', accelerator: 'CmdOrCtrl+7', click: () => switchTool('boids') }
           ]
         }
       ]

@@ -70,14 +70,25 @@ export const tools = {
   rhythm: {
     id: 'rhythm',
     name: 'RITM',
-    description: 'Rhythm visualizer',
-    accept: '*',
+    description: 'Waveform visualizer',
+    accept: '.json',
     load: async (canvasContainer, paneContainer) => {
       const { loadRhythmTool } = await import('./rhythm/index.js');
       return loadRhythmTool(canvasContainer, paneContainer);
+    }
+  },
+
+  boids: {
+    id: 'boids',
+    name: 'BOIDS',
+    description: 'Flocking simulation',
+    accept: '.json',
+    load: async (canvasContainer, paneContainer) => {
+      const { loadBoidsTool } = await import('./boids/index.js');
+      return loadBoidsTool(canvasContainer, paneContainer);
     }
   }
 };
 
 // Tool order for navigation
-export const toolOrder = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm'];
+export const toolOrder = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm', 'boids'];
