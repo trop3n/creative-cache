@@ -1,234 +1,199 @@
 // ============================================================
-// Preset System - Save/Load configurations
+// FLAKE Tool — Preset system
 // ============================================================
 
-import { canvas, grid, shape, pattern, animation, palette, customShape, cloneState, applyState } from './state.js';
+import {
+  canvas, pattern, style, noiseParams, swirl, motion,
+  cloneState, applyState,
+} from './state.js';
 
-// Built-in presets
+// ── Built-in presets ──────────────────────────────────────────
+
 const builtInPresets = {
-  'Radial Gradient': {
-    grid: { cols: 15, rows: 15, cellSize: 40, symmetry: 'radial', symmetryCount: 8 },
-    shape: { type: 'circle', size: 0.9, scaleMode: 'easeOut', scaleMin: 0.1, scaleMax: 1.0 },
-    palette: { colors: ['#ff6b6b', '#feca57', '#48dbfb', '#ff9ff3', '#54a0ff'] },
+
+  'Motion Ripples Waves': {
+    canvas:  { background: '#111111', ratio: '4:3' },
+    pattern: { cols: 10, cellSize: 48, cellOffset: 0, seedNoise: 3, seedFrom: 0 },
+    style:   { shapeType: 'arrow', fillMapping: 2, colors: ['#6c5ce7', '#ffffff', '#b2bec3', '#fdcb6e'],
+               shapeScale: 0.75, scalingEase: 'easeOut', baseRotation: 0, angleMult: -7, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 1.0, branchAngle: 0, freqLayers: 3, freqAmply: 0.5 },
   },
-  
-  'Geometric Mandala': {
-    grid: { cols: 12, rows: 12, cellSize: 50, symmetry: 'radial', symmetryCount: 12 },
-    shape: { type: 'hexagon', size: 0.7, rotation: 30, scaleMode: 'linear', scaleMin: 0.3, scaleMax: 0.9 },
-    palette: { colors: ['#2d3436', '#636e72', '#b2bec3', '#dfe6e9', '#74b9ff'] },
+
+  'Radial Kaleidoscope': {
+    canvas:  { background: '#1a1a1a', ratio: '1:1' },
+    pattern: { cols: 14, cellSize: 36, cellOffset: 0, seedNoise: 7, seedFrom: 0 },
+    style:   { shapeType: 'square', fillMapping: 4, colors: ['#e84393', '#e17055', '#fdcb6e', '#00b894'],
+               shapeScale: 0.9, scalingEase: 'easeOut', baseRotation: 45, angleMult: 4, strokeWidth: 0 },
+    noise:   { symmetry: '4way', branchAhead: 0.5, branchAngle: 45, freqLayers: 4, freqAmply: 0.6 },
   },
-  
-  'Organic Swirl': {
-    grid: { cols: 20, rows: 20, cellSize: 30, symmetry: 'none' },
-    shape: { type: 'circle', size: 0.6, scaleMode: 'swirl', scaleMin: 0.2, scaleMax: 1.0, scalePower: 2 },
-    pattern: { enabled: true, noiseScale: 0.2, noiseIntensity: 0.6, seed: 42 },
-    palette: { colors: ['#00b894', '#00cec9', '#0984e3', '#6c5ce7', '#fd79a8'] },
+
+  'Geometric Bloom': {
+    canvas:  { background: '#0d1117', ratio: '4:3' },
+    pattern: { cols: 8, cellSize: 56, cellOffset: 0, seedNoise: 12, seedFrom: 2 },
+    style:   { shapeType: 'hexagon', fillMapping: 3, colors: ['#00cec9', '#0984e3', '#6c5ce7', '#a29bfe'],
+               shapeScale: 0.85, scalingEase: 'linear', baseRotation: 30, angleMult: 6, strokeWidth: 0.5, strokeColor: '#ffffff' },
+    noise:   { symmetry: '2way', branchAhead: 1.5, branchAngle: 30, freqLayers: 3, freqAmply: 0.45 },
   },
-  
-  'Star Burst': {
-    grid: { cols: 10, rows: 10, cellSize: 60, symmetry: 'radial', symmetryCount: 6 },
-    shape: { type: 'star', size: 0.8, rotation: 0, scaleMode: 'easeIn', scaleMin: 0.1, scaleMax: 1.2 },
-    palette: { colors: ['#ffeaa7', '#fdcb6e', '#e17055', '#d63031', '#e84393'] },
+
+  'Star Burst Field': {
+    canvas:  { background: '#111111', ratio: '16:9' },
+    pattern: { cols: 12, cellSize: 40, cellOffset: 0, seedNoise: 42, seedFrom: 0 },
+    style:   { shapeType: 'star', fillMapping: 2, colors: ['#ffeaa7', '#fdcb6e', '#e17055', '#d63031'],
+               shapeScale: 0.8, scalingEase: 'easeIn', baseRotation: -20, angleMult: 5, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 0.8, branchAngle: 0, freqLayers: 2, freqAmply: 0.4 },
   },
-  
-  'Minimal Cross': {
-    grid: { cols: 8, rows: 8, cellSize: 70, symmetry: 'both' },
-    shape: { type: 'cross', size: 0.6, rotation: 45, scaleMode: 'linear', scaleMin: 0.4, scaleMax: 1.0 },
-    palette: { colors: ['#2d3436', '#636e72', '#b2bec3', '#dfe6e9', '#ffffff'] },
+
+  'Mirror Diamonds': {
+    canvas:  { background: '#1a1a2e', ratio: '4:3' },
+    pattern: { cols: 16, cellSize: 32, cellOffset: 0.5, seedNoise: 5, seedFrom: 1 },
+    style:   { shapeType: 'diamond', fillMapping: 4, colors: ['#e94560', '#0f3460', '#533483', '#16213e'],
+               shapeScale: 0.7, scalingEase: 'step', baseRotation: 0, angleMult: -3, strokeWidth: 0 },
+    noise:   { symmetry: 'mirror', branchAhead: 0.0, branchAngle: 0, freqLayers: 5, freqAmply: 0.7 },
   },
-  
+
+  'Organic Circles': {
+    canvas:  { background: '#222034', ratio: '4:3' },
+    pattern: { cols: 18, cellSize: 28, cellOffset: 0, seedNoise: 77, seedFrom: 0 },
+    style:   { shapeType: 'circle', fillMapping: 2, colors: ['#ff79c6', '#bd93f9', '#8be9fd', '#50fa7b'],
+               shapeScale: 0.9, scalingEase: 'easeInOut', baseRotation: 0, angleMult: 0, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 2.0, branchAngle: 90, freqLayers: 4, freqAmply: 0.55 },
+  },
+
   'Triangular Flow': {
-    grid: { cols: 16, rows: 16, cellSize: 35, symmetry: 'vertical' },
-    shape: { type: 'triangle', size: 0.75, rotation: 0, scaleMode: 'easeInOut', scaleMin: 0.3, scaleMax: 1.0 },
-    palette: { colors: ['#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5', '#ff8b94'] },
+    canvas:  { background: '#111111', ratio: '3:2' },
+    pattern: { cols: 10, cellSize: 44, cellOffset: 0, seedNoise: 21, seedFrom: 3 },
+    style:   { shapeType: 'triangle', fillMapping: 3, colors: ['#a8e6cf', '#dcedc1', '#ffd3b6', '#ffaaa5'],
+               shapeScale: 0.75, scalingEase: 'easeOut', baseRotation: 0, angleMult: -9, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 1.2, branchAngle: -20, freqLayers: 3, freqAmply: 0.5 },
+    swirl:   { applyEffect: true, swirlMode: 'rotary', swirlStart: 0.1, frequency: 1.5 },
   },
-  
-  'Neon Circles': {
-    grid: { cols: 8, rows: 8, cellSize: 80, symmetry: 'none' },
-    shape: { type: 'circle', size: 1.2, scaleMode: 'linear', scaleMin: 0.2, scaleMax: 1.0, blendMode: 'add' },
-    palette: { colors: ['#ff00ff', '#00ffff', '#ffff00', '#ff0080', '#8000ff'] },
+
+  'Neon Cross Grid': {
+    canvas:  { background: '#000000', ratio: '1:1' },
+    pattern: { cols: 8, cellSize: 64, cellOffset: 0, seedNoise: 1, seedFrom: 0 },
+    style:   { shapeType: 'cross', fillMapping: 1, colors: ['#ff00ff', '#00ffff', '#ffff00', '#ff0080'],
+               shapeScale: 0.6, scalingEase: 'linear', baseRotation: 45, angleMult: 2, strokeWidth: 0 },
+    noise:   { symmetry: '4way', branchAhead: 0, branchAngle: 45, freqLayers: 1, freqAmply: 0.3 },
   },
-  
-  'Diamond Echo': {
-    grid: { cols: 14, rows: 14, cellSize: 45, symmetry: 'horizontal' },
-    shape: { type: 'diamond', size: 0.65, rotation: 0, scaleMode: 'step', scaleMin: 0.2, scaleMax: 1.0 },
-    palette: { colors: ['#2c3e50', '#34495e', '#7f8c8d', '#95a5a6', '#bdc3c7'] },
+
+  'Swirling Hearts': {
+    canvas:  { background: '#1a0a00', ratio: '4:3' },
+    pattern: { cols: 9, cellSize: 52, cellOffset: 0, seedNoise: 88, seedFrom: 0 },
+    style:   { shapeType: 'heart', fillMapping: 2, colors: ['#ff9a9e', '#fecfef', '#fad0c4', '#ffecd2'],
+               shapeScale: 0.7, scalingEase: 'easeOut', baseRotation: 0, angleMult: -5, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 1.5, branchAngle: 30, freqLayers: 3, freqAmply: 0.6 },
+    swirl:   { applyEffect: true, swirlMode: 'rotary', swirlStart: 0, frequency: 2.0 },
   },
-  
-  'Hearts Bloom': {
-    grid: { cols: 10, rows: 10, cellSize: 55, symmetry: 'radial', symmetryCount: 8 },
-    shape: { type: 'heart', size: 0.7, rotation: 0, scaleMode: 'easeOut', scaleMin: 0.15, scaleMax: 0.9 },
-    palette: { colors: ['#ff9a9e', '#fecfef', '#fad0c4', '#ffecd2', '#fcb69f'] },
-  },
-  
-  'Noise Texture': {
-    grid: { cols: 25, rows: 25, cellSize: 24, symmetry: 'none' },
-    shape: { type: 'square', size: 0.9, rotation: 45, scaleMode: 'linear', scaleMin: 0.1, scaleMax: 0.5 },
-    pattern: { enabled: true, noiseScale: 0.3, noiseIntensity: 0.8, seed: 123 },
-    palette: { colors: ['#1a1a2e', '#16213e', '#0f3460', '#533483', '#e94560'] },
-  },
-  
-  'Retro Grid': {
-    grid: { cols: 12, rows: 8, cellSize: 60, symmetry: 'horizontal' },
-    shape: { type: 'square', size: 0.5, rotation: 0, scaleMode: 'linear', scaleMin: 0.3, scaleMax: 1.0 },
-    palette: { colors: ['#ff006e', '#8338ec', '#3a86ff', '#06ffa5', '#ffbe0b'] },
-  },
-  
-  'Spiral Galaxy': {
-    grid: { cols: 20, rows: 20, cellSize: 30, symmetry: 'radial', symmetryCount: 5 },
-    shape: { type: 'circle', size: 0.5, rotation: 0, scaleMode: 'swirl', scaleMin: 0.1, scaleMax: 0.8, scalePower: 3 },
-    pattern: { enabled: true, noiseScale: 0.15, noiseIntensity: 0.4, seed: 777 },
-    palette: { colors: ['#0c0c1d', '#16213e', '#4a1c40', '#c7417b', '#ff9a8b'] },
+
+  'Free Noise Field': {
+    canvas:  { background: '#282828', ratio: '16:9' },
+    pattern: { cols: 20, cellSize: 24, cellOffset: 0, seedNoise: 55, seedFrom: 5 },
+    style:   { shapeType: 'arrow', fillMapping: 0, colors: ['#50fa7b', '#f8f8f2', '#6272a4', '#bd93f9'],
+               shapeScale: 0.65, scalingEase: 'none', baseRotation: 0, angleMult: 10, strokeWidth: 0 },
+    noise:   { symmetry: 'standard', branchAhead: 3.0, branchAngle: 0, freeMode: true, freqLayers: 6, freqAmply: 0.8 },
   },
 };
 
-// User saved presets (stored in memory during session)
+// ── User presets (session memory) ─────────────────────────────
 let userPresets = {};
 
-/**
- * Get list of all preset names
- * @returns {Array} - preset names
- */
+// ── Public API ────────────────────────────────────────────────
+
 export function getPresetNames() {
   return [
     '** Default **',
     ...Object.keys(builtInPresets),
-    '--- User Presets ---',
     ...Object.keys(userPresets),
   ];
 }
 
-/**
- * Load a preset by name
- * @param {string} name - preset name
- * @returns {boolean} - success
- */
 export function loadPreset(name) {
   if (name === '** Default **') {
     resetToDefault();
     return true;
   }
-  
-  const preset = builtInPresets[name] || userPresets[name];
-  if (!preset) return false;
-  
-  applyPreset(preset);
+  const data = builtInPresets[name] || userPresets[name];
+  if (!data) return false;
+  applyPreset(data);
   return true;
 }
 
-/**
- * Apply preset data to state
- * @param {Object} preset - preset data
- */
-function applyPreset(preset) {
-  if (preset.grid) applyState(grid, preset.grid);
-  if (preset.shape) applyState(shape, preset.shape);
-  if (preset.pattern) applyState(pattern, preset.pattern);
-  if (preset.animation) applyState(animation, preset.animation);
-  if (preset.palette) {
-    if (preset.palette.colors) {
-      palette.colors = [...preset.palette.colors];
-    }
-  }
-  if (preset.canvas) applyState(canvas, preset.canvas);
-}
-
-/**
- * Save current state as a user preset
- * @param {string} name - preset name
- */
 export function saveUserPreset(name) {
-  userPresets[name] = {
-    grid: cloneState(grid),
-    shape: cloneState(shape),
-    pattern: cloneState(pattern),
-    animation: cloneState(animation),
-    palette: { colors: [...palette.colors] },
-    canvas: { background: canvas.background },
-  };
+  userPresets[name] = captureState();
 }
 
-/**
- * Export current state as JSON
- * @returns {string} - JSON string
- */
 export function exportCurrentState() {
-  const data = {
-    grid: cloneState(grid),
-    shape: cloneState(shape),
-    pattern: cloneState(pattern),
-    animation: cloneState(animation),
-    palette: { colors: [...palette.colors] },
-    canvas: { background: canvas.background },
-  };
-  return JSON.stringify(data, null, 2);
+  return JSON.stringify(captureState(), null, 2);
 }
 
-/**
- * Import state from JSON
- * @param {string} json - JSON string
- * @returns {boolean} - success
- */
 export function importState(json) {
   try {
-    const data = JSON.parse(json);
-    applyPreset(data);
+    applyPreset(JSON.parse(json));
     return true;
   } catch (e) {
-    console.error('Failed to import preset:', e);
+    console.error('FLAKE: failed to import preset', e);
     return false;
   }
 }
 
-/**
- * Delete a user preset
- * @param {string} name - preset name
- */
-export function deleteUserPreset(name) {
-  delete userPresets[name];
+// ── Helpers ───────────────────────────────────────────────────
+
+function applyPreset(data) {
+  if (data.canvas)  applyState(canvas,      data.canvas);
+  if (data.pattern) applyState(pattern,     data.pattern);
+  if (data.style)   applyState(style,       data.style);
+  if (data.noise)   applyState(noiseParams, data.noise);
+  if (data.swirl)   applyState(swirl,       data.swirl);
+  if (data.motion)  applyState(motion,      data.motion);
 }
 
-/**
- * Reset to default state
- */
+function captureState() {
+  return {
+    canvas:  cloneState({ background: canvas.background, ratio: canvas.ratio }),
+    pattern: cloneState(pattern),
+    style:   cloneState(style),
+    noise:   cloneState(noiseParams),
+    swirl:   cloneState(swirl),
+    motion:  cloneState({ motionType: motion.motionType, speed: motion.speed }),
+  };
+}
+
 function resetToDefault() {
-  // Grid defaults
-  grid.cols = 12;
-  grid.rows = 12;
-  grid.cellSize = 60;
-  grid.offsetX = 0;
-  grid.offsetY = 0;
-  grid.symmetry = 'none';
-  grid.symmetryCount = 6;
-  
-  // Shape defaults
-  shape.type = 'circle';
-  shape.size = 0.8;
-  shape.rotation = 0;
-  shape.rotationAuto = false;
-  shape.scaleMode = 'linear';
-  shape.scaleMin = 0.2;
-  shape.scaleMax = 1.0;
-  shape.fillMode = 'solid';
-  shape.fillColor = '#4a9eff';
-  shape.strokeMode = 'none';
-  shape.blendMode = 'blend';
-  
-  // Pattern defaults
-  pattern.enabled = false;
-  pattern.seed = 1;
-  pattern.noiseScale = 0.1;
-  pattern.noiseIntensity = 0.5;
-  
-  // Animation defaults
-  animation.enabled = false;
-  animation.playing = false;
-  animation.speed = 1;
-  animation.loopDuration = 120;
-  
-  // Palette defaults
-  palette.colors = ['#4a9eff', '#ff6b6b', '#4ecdc4', '#ffe66d', '#a8e6cf'];
-  
-  // Canvas defaults
-  canvas.background = '#111111';
+  canvas.background   = '#111111';
+  canvas.ratio        = '4:3';
+
+  pattern.cols        = 10;
+  pattern.cellSize    = 48;
+  pattern.cellOffset  = 0;
+  pattern.seedFrom    = 0;
+  pattern.seedNoise   = 3;
+  pattern.cellDivider = false;
+
+  style.shapeType     = 'arrow';
+  style.fillMapping   = 2;
+  style.colors        = ['#6c5ce7', '#ffffff', '#b2bec3', '#fdcb6e'];
+  style.shapeScale    = 0.75;
+  style.scalingEase   = 'easeOut';
+  style.baseRotation  = 0;
+  style.angleMult     = -7;
+  style.strokeWidth   = 0;
+  style.strokeColor   = '#ffffff';
+  style.blendMode     = 'blend';
+
+  noiseParams.symmetry    = 'standard';
+  noiseParams.branchAhead = 1.0;
+  noiseParams.branchAngle = 0;
+  noiseParams.freqComp    = 'none';
+  noiseParams.freeMode    = false;
+  noiseParams.freqLayers  = 3;
+  noiseParams.freqAmply   = 0.5;
+
+  swirl.applyEffect   = false;
+  swirl.swirlMode     = 'none';
+  swirl.swirlStart    = 0;
+  swirl.frequency     = 1.0;
+
+  motion.motionType   = 'none';
+  motion.speed        = 1.0;
+  motion.playing      = false;
 }

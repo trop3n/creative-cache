@@ -169,6 +169,34 @@ export function drawHeart(p, x, y, size, rotation = 0) {
 }
 
 /**
+ * Draw an arrow/chevron shape (pointing right at rotation=0).
+ * @param {p5} p - p5 instance
+ * @param {number} x - center x
+ * @param {number} y - center y
+ * @param {number} size - size
+ * @param {number} rotation - rotation in degrees
+ */
+export function drawArrow(p, x, y, size, rotation = 0) {
+  p.push();
+  p.translate(x, y);
+  p.rotate(p.radians(rotation));
+  const h = size * 0.48;   // half-length
+  const w = size * 0.30;   // half-width at base
+  const notch = h * 0.30;  // concave notch depth at tail
+
+  p.beginShape();
+  p.vertex(h, 0);           // tip →
+  p.vertex(0, -w);          // upper wing
+  p.vertex(-notch, -w * 0.45); // upper notch
+  p.vertex(-h * 0.7, -w * 0.45);
+  p.vertex(-h * 0.7, w * 0.45);
+  p.vertex(-notch, w * 0.45);  // lower notch
+  p.vertex(0, w);           // lower wing
+  p.endShape(p.CLOSE);
+  p.pop();
+}
+
+/**
  * Main shape drawing function - dispatches to specific shape
  * @param {p5} p - p5 instance
  * @param {string} type - shape type
@@ -179,6 +207,9 @@ export function drawHeart(p, x, y, size, rotation = 0) {
  */
 export function drawShape(p, type, x, y, size, rotation = 0) {
   switch (type) {
+    case 'arrow':
+      drawArrow(p, x, y, size, rotation);
+      break;
     case 'circle':
       drawCircle(p, x, y, size);
       break;

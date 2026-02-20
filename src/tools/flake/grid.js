@@ -1,333 +1,236 @@
 // ============================================================
-// Grid System - Distance-based pattern generation
+// FLAKE Tool — Tile-based angle-field rendering engine
+// ============================================================
+// Core concept:
+//   • The canvas is filled by tiling a square sub-grid of (pattern.cols × pattern.cols) cells.
+//   • Within each tile, shapes scale by distance from the tile centre (scalingEase).
+//   • Every cell's rotation = baseRotation + angleMult × angleField(col, row).
+//   • The angle field = radial-from-tile-centre + multi-octave noise.
+//   • Symmetry mirrors the noise sample coordinates inside each tile.
+//   • Swirl adds a distance-proportional rotational offset.
+//   • Motion animates the noise phase over time.
 // ============================================================
 
-import { grid, shape, canvas, calculateScale, calculateRotation, palette, pattern, mask } from './state.js';
-import { createNoise2D, createNoise3D } from 'simplex-noise';
+import { createNoise2D } from 'simplex-noise';
+import {
+  canvas, pattern, style, noiseParams, swirl, mask, motion,
+  customShape, applyEasing,
+} from './state.js';
+import { drawShape } from './shapes/library.js';
+import { drawSVGPath } from './shapes/svg.js';
+import { getFillColor } from './color.js';
 
-// Initialize noise
+// One shared noise instance; we seed via coordinate offset using pattern.seedNoise.
 const noise2D = createNoise2D();
-const noise3D = createNoise3D();
+
+// ── Public: render one frame ─────────────────────────────────
 
 /**
- * Calculate the center point of the grid
- * @returns {Object} - {x, y}
+ * Render the full pattern onto the p5 canvas.
+ * @param {p5} p
+ * @param {number} time  normalised loop time 0–1 (for motion)
  */
-export function getGridCenter() {
-  return {
-    x: (grid.cols * grid.cellSize) / 2 + grid.offsetX,
-    y: (grid.rows * grid.cellSize) / 2 + grid.offsetY,
-  };
-}
+export function renderPattern(p, time = 0) {
+  // Trail/ghost effect: when motion is active and opacityLevel < 1,
+  // overlay a semi-transparent background instead of fully clearing.
+  if (motion.playing && motion.motionType !== 'none' && motion.opacityLevel < 0.99) {
+    const bg = p.color(canvas.background);
+    bg.setAlpha(Math.round(motion.opacityLevel * 255));
+    p.noStroke();
+    p.fill(bg);
+    p.blendMode(p.BLEND);
+    p.rect(0, 0, canvas.width, canvas.height);
+  } else {
+    p.background(canvas.background);
+  }
 
-/**
- * Calculate distance from a point to the grid center
- * @param {number} x - point x
- * @param {number} y - point y
- * @returns {number} - normalized distance (0-1)
- */
-export function getNormalizedDistance(x, y) {
-  const center = getGridCenter();
-  const maxDist = Math.sqrt(
-    Math.pow(grid.cols * grid.cellSize / 2, 2) +
-    Math.pow(grid.rows * grid.cellSize / 2, 2)
-  );
-  
-  const dist = Math.sqrt(
-    Math.pow(x - center.x, 2) +
-    Math.pow(y - center.y, 2)
-  );
-  
-  return Math.min(dist / maxDist, 1);
-}
+  const { cols, cellSize, cellOffset, cellDivider } = pattern;
 
-/**
- * Get all cell positions for the grid considering symmetry
- * @returns {Array} - array of cell data: {x, y, col, row, dist, isOriginal}
- */
-export function getGridCells() {
-  const cells = [];
-  const center = getGridCenter();
-  
-  for (let row = 0; row < grid.rows; row++) {
-    for (let col = 0; col < grid.cols; col++) {
-      const x = col * grid.cellSize + grid.cellSize / 2 + grid.offsetX;
-      const y = row * grid.cellSize + grid.cellSize / 2 + grid.offsetY;
-      const dist = getNormalizedDistance(x, y);
-      
-      // Check if this cell should be rendered (based on symmetry)
-      const cellData = applySymmetry(x, y, col, row, dist, center);
-      cells.push(...cellData);
+  // How many cells span the canvas (add 1 for partial tiles at edges)
+  const numCols = Math.ceil(canvas.width  / cellSize) + 1;
+  const numRows = Math.ceil(canvas.height / cellSize) + 1;
+
+  // Pre-load mask pixels once per frame (not per cell)
+  if (mask.image && mask.maskTool === 'image') {
+    mask.image.loadPixels();
+  }
+
+  for (let row = 0; row < numRows; row++) {
+    for (let col = 0; col < numCols; col++) {
+
+      // Brick-offset alternate rows
+      const xOff = (row % 2 === 1) ? cellSize * cellOffset * 0.5 : 0;
+      const cx = col * cellSize + cellSize * 0.5 + xOff;
+      const cy = row * cellSize + cellSize * 0.5;
+
+      // Tile-local indices (wrap to 0…cols-1)
+      const tc = ((col % cols) + cols) % cols;
+      const tr = ((row % cols) + cols) % cols;
+
+      // Normalised position within tile (−1…+1, centre = 0)
+      const half = cols * 0.5;
+      const tnx = (tc - half + 0.5) / half;
+      const tny = (tr - half + 0.5) / half;
+
+      // Euclidean distance from tile centre, clamped 0–1
+      const dist = Math.min(Math.sqrt(tnx * tnx + tny * tny) / Math.SQRT2, 1.0);
+
+      // --- Shape size (max at centre, falls off with easing) ---
+      const scaledT  = applyEasing(1 - dist, style.scalingEase);
+      const shapeSize = cellSize * style.shapeScale * scaledT;
+
+      if (shapeSize < 0.5) continue;
+
+      // --- Rotation from angle field ---
+      const fieldAngle = computeAngle(col, row, tnx, tny, dist, time); // radians
+      const rotDeg = style.baseRotation + fieldAngle * style.angleMult * (180 / Math.PI);
+
+      // --- Mask ---
+      const maskAlpha = getMaskAlpha(cx, cy);
+      if (maskAlpha < 0.01) continue;
+
+      // --- Color ---
+      const color = getFillColor(dist, col + row * numCols, style);
+      drawCell(p, cx, cy, shapeSize, rotDeg, color, maskAlpha);
     }
   }
-  
-  return cells;
-}
 
-/**
- * Apply symmetry transformations to a cell
- * @param {number} x - original x
- * @param {number} y - original y
- * @param {number} col - column index
- * @param {number} row - row index
- * @param {number} dist - normalized distance
- * @param {Object} center - grid center
- * @returns {Array} - array of cell positions
- */
-function applySymmetry(x, y, col, row, dist, center) {
-  const cells = [{ x, y, col, row, dist, isOriginal: true }];
-  
-  switch (grid.symmetry) {
-    case 'horizontal':
-      cells.push({
-        x: center.x * 2 - x,
-        y: y,
-        col: grid.cols - 1 - col,
-        row,
-        dist,
-        isOriginal: false,
-      });
-      break;
-      
-    case 'vertical':
-      cells.push({
-        x: x,
-        y: center.y * 2 - y,
-        col,
-        row: grid.rows - 1 - row,
-        dist,
-        isOriginal: false,
-      });
-      break;
-      
-    case 'both':
-      // Mirror horizontally
-      cells.push({
-        x: center.x * 2 - x,
-        y: y,
-        col: grid.cols - 1 - col,
-        row,
-        dist,
-        isOriginal: false,
-      });
-      // Mirror vertically
-      cells.push({
-        x: x,
-        y: center.y * 2 - y,
-        col,
-        row: grid.rows - 1 - row,
-        dist,
-        isOriginal: false,
-      });
-      // Mirror both
-      cells.push({
-        x: center.x * 2 - x,
-        y: center.y * 2 - y,
-        col: grid.cols - 1 - col,
-        row: grid.rows - 1 - row,
-        dist,
-        isOriginal: false,
-      });
-      break;
-      
-    case 'radial':
-      // Create radial symmetry around center
-      const dx = x - center.x;
-      const dy = y - center.y;
-      const baseAngle = Math.atan2(dy, dx);
-      const radius = Math.sqrt(dx * dx + dy * dy);
-      
-      for (let i = 1; i < grid.symmetryCount; i++) {
-        const angle = baseAngle + (Math.PI * 2 * i) / grid.symmetryCount;
-        cells.push({
-          x: center.x + Math.cos(angle) * radius,
-          y: center.y + Math.sin(angle) * radius,
-          col,
-          row,
-          dist,
-          isOriginal: false,
-          rotation: (360 * i) / grid.symmetryCount,
-        });
-      }
-      break;
+  // Grid overlay
+  if (cellDivider) {
+    drawCellGrid(p, numCols, numRows, cellSize);
   }
-  
-  return cells;
 }
 
+// ── Angle field ───────────────────────────────────────────────
+
 /**
- * Calculate the actual size for a shape at a given distance
- * @param {number} dist - normalized distance (0-1)
- * @param {number} time - animation time (0-1)
- * @returns {number} - actual size
+ * Returns the angle (radians) for the cell at global (col, row).
+ * Combines: radial from tile centre + multi-octave noise + swirl + motion.
  */
-export function getShapeSize(dist, time = 0) {
-  const baseSize = grid.cellSize * shape.size;
-  let scale = calculateScale(dist);
-  
-  // Apply pattern noise
-  if (pattern.enabled) {
-    const noiseVal = getNoiseValue(dist, time);
-    scale *= 0.5 + noiseVal * 0.5;
+function computeAngle(col, row, tnx, tny, dist, time) {
+  const {
+    symmetry, branchAhead, branchAngle, freeMode,
+    freqLayers, freqAmply,
+  } = noiseParams;
+  const seed = pattern.seedNoise + pattern.seedFrom;
+
+  // Apply symmetry to tile-local coords for noise sampling only
+  let sx = tnx, sy = tny;
+  switch (symmetry) {
+    case '2way':   sx = Math.abs(tnx); break;
+    case '4way':   sx = Math.abs(tnx); sy = Math.abs(tny); break;
+    case 'mirror': sx = 1 - Math.abs(Math.abs(tnx) - 1); break;
   }
-  
-  return baseSize * scale;
-}
 
-/**
- * Calculate the rotation for a shape
- * @param {number} dist - normalized distance
- * @param {number} baseRotation - base rotation
- * @param {number} time - animation time
- * @returns {number} - final rotation
- */
-export function getShapeRotation(dist, baseRotation, time = 0) {
-  let rotation = calculateRotation(dist, baseRotation);
-  
-  if (shape.rotationAuto) {
-    rotation += time * 360 * shape.rotationSpeed;
+  // Base radial direction from tile centre (points outward)
+  const radial = freeMode ? 0 : Math.atan2(tny, tnx);
+
+  // Multi-octave noise (using global col/row for cross-tile continuity)
+  let noiseAcc = 0;
+  let freq = 0.07;
+  let amp  = freqAmply;
+  for (let i = 0; i < freqLayers; i++) {
+    const nx = (sx * pattern.cols + col * 0.1) * freq + seed * 13.7;
+    const ny = (sy * pattern.cols + row * 0.1) * freq + seed * 7.31;
+    noiseAcc += noise2D(nx, ny) * amp;
+    freq *= 2.0;
+    amp  *= 0.5;
   }
-  
-  return rotation;
-}
 
-/**
- * Get noise value for a position
- * @param {number} dist - normalized distance
- * @param {number} time - time value
- * @returns {number} - noise value (0-1)
- */
-export function getNoiseValue(dist, time = 0) {
-  if (!pattern.enabled) return 0.5;
-  
-  const scale = pattern.noiseScale;
-  const seed = pattern.seed;
-  
-  // Use distance and seed for noise
-  const nx = dist * scale * 10 + seed;
-  const ny = time * scale + seed;
-  
-  const val = noise2D(nx, ny);
-  return (val + 1) * 0.5; // Normalize to 0-1
-}
+  // Branch look-ahead: sample noise slightly ahead for flow coherence
+  let branchContrib = 0;
+  if (branchAhead > 0.01) {
+    const lookNx = (sx + Math.cos(radial + noiseAcc) * branchAhead * 0.5) * freq * 0.5 + seed * 5.1;
+    const lookNy = (sy + Math.sin(radial + noiseAcc) * branchAhead * 0.5) * freq * 0.5 + seed * 9.3;
+    branchContrib = noise2D(lookNx, lookNy) * freqAmply * branchAhead * 0.3;
+  }
 
-/**
- * Get the fill color for a shape
- * @param {number} dist - normalized distance
- * @param {number} index - shape index
- * @param {number} time - animation time
- * @returns {string} - color string
- */
-export function getFillColor(dist, index, time = 0) {
-  switch (shape.fillMode) {
-    case 'solid':
-      return shape.fillColor;
-      
-    case 'distance': {
-      // Interpolate between palette colors based on distance
-      const colors = palette.colors;
-      const t = dist * (colors.length - 1);
-      const i = Math.floor(t);
-      const frac = t - i;
-      
-      if (i >= colors.length - 1) return colors[colors.length - 1];
-      return interpolateColor(colors[i], colors[i + 1], frac);
+  // Swirl offset (distance-based rotational push)
+  let swirlOff = 0;
+  if (swirl.applyEffect && swirl.swirlMode !== 'none') {
+    const sd = Math.max(0, dist - swirl.swirlStart);
+    swirlOff = sd * swirl.frequency * Math.PI * (swirl.swirlMode === 'wave' ? Math.sin(dist * Math.PI * 4) : 1);
+  }
+
+  // Motion over time
+  let timeOff = 0;
+  if (motion.playing && motion.motionType !== 'none') {
+    if (motion.motionType === 'rotate') {
+      timeOff = time * Math.PI * 2 * motion.speed;
+    } else if (motion.motionType === 'noise') {
+      timeOff = noise2D(col * 0.03 + time * motion.speed, row * 0.03) * Math.PI;
     }
-      
-    case 'palette': {
-      // Cycle through palette based on index
-      const colors = palette.colors;
-      return colors[index % colors.length];
-    }
-      
-    case 'random': {
-      // Deterministic random based on index
-      const colors = palette.colors;
-      return colors[(index * 7) % colors.length];
-    }
-      
-    default:
-      return shape.fillColor;
   }
+
+  const branchOff = branchAngle * (Math.PI / 180);
+
+  return radial + (noiseAcc + branchContrib) * Math.PI + branchOff + swirlOff + timeOff;
 }
 
-/**
- * Get stroke color for a shape
- * @param {number} dist - normalized distance
- * @param {number} index - shape index
- * @returns {string} - color string
- */
-export function getStrokeColor(dist, index) {
-  if (shape.strokeMode === 'none') return null;
-  if (shape.strokeMode === 'solid') return shape.strokeColor;
-  
-  // For gradient/distance modes, same logic as fill
-  return getFillColor(dist, index);
+// ── Draw a single cell ────────────────────────────────────────
+
+function drawCell(p, x, y, size, rotDeg, color, alpha) {
+  // Apply blend mode
+  const bm = style.blendMode;
+  if (bm !== 'blend' && p[bm.toUpperCase()]) {
+    p.blendMode(p[bm.toUpperCase()]);
+  }
+
+  const c = p.color(color);
+  c.setAlpha(alpha * 255);
+  p.fill(c);
+
+  if (style.strokeWidth > 0) {
+    const sc = p.color(style.strokeColor || '#ffffff');
+    sc.setAlpha(alpha * 255);
+    p.stroke(sc);
+    p.strokeWeight(style.strokeWidth);
+  } else {
+    p.noStroke();
+  }
+
+  if (style.shapeType === 'custom' && customShape.paths.length > 0) {
+    drawSVGPath(p, customShape.paths[0], x, y, size, customShape.bounds, rotDeg);
+  } else {
+    drawShape(p, style.shapeType, x, y, size, rotDeg);
+  }
+
+  p.blendMode(p.BLEND);
 }
 
-/**
- * Interpolate between two hex colors
- * @param {string} c1 - first color
- * @param {string} c2 - second color
- * @param {number} t - interpolation factor (0-1)
- * @returns {string} - interpolated color
- */
-function interpolateColor(c1, c2, t) {
-  const r1 = parseInt(c1.slice(1, 3), 16);
-  const g1 = parseInt(c1.slice(3, 5), 16);
-  const b1 = parseInt(c1.slice(5, 7), 16);
-  
-  const r2 = parseInt(c2.slice(1, 3), 16);
-  const g2 = parseInt(c2.slice(3, 5), 16);
-  const b2 = parseInt(c2.slice(5, 7), 16);
-  
-  const r = Math.round(r1 + (r2 - r1) * t);
-  const g = Math.round(g1 + (g2 - g1) * t);
-  const b = Math.round(b1 + (b2 - b1) * t);
-  
-  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+// ── Mask sampling ─────────────────────────────────────────────
+
+function getMaskAlpha(x, y) {
+  if (!mask.image || mask.maskTool !== 'image') return 1;
+
+  const img = mask.image;
+  const px  = Math.floor((x / canvas.width)  * img.width);
+  const py  = Math.floor((y / canvas.height) * img.height);
+
+  if (px < 0 || px >= img.width || py < 0 || py >= img.height) return 1;
+
+  const idx = (py * img.width + px) * 4;
+  const brightness = (img.pixels[idx] + img.pixels[idx + 1] + img.pixels[idx + 2]) / 765;
+  return mask.invert ? 1 - brightness : brightness;
 }
 
-/**
- * Get mask value for a position
- * @param {number} x - x position
- * @param {number} y - y position
- * @returns {number} - mask value (0-1)
- */
-export function getMaskValue(x, y) {
-  if (!mask.enabled || !mask.image) return 1;
-  
-  // Map position to mask image coordinates
-  const imgW = mask.image.width;
-  const imgH = mask.image.height;
-  
-  const mx = Math.floor((x / canvas.width) * imgW);
-  const my = Math.floor((y / canvas.height) * imgH);
-  
-  if (mx < 0 || mx >= imgW || my < 0 || my >= imgH) return 1;
-  
-  // Get pixel brightness (would need actual image data)
-  // For now, return 1
-  return 1;
+// ── Cell grid overlay ─────────────────────────────────────────
+
+function drawCellGrid(p, numCols, numRows, cellSize) {
+  p.push();
+  p.stroke(60, 60, 60, 100);
+  p.strokeWeight(0.5);
+  p.noFill();
+  for (let c = 0; c <= numCols; c++) {
+    p.line(c * cellSize, 0, c * cellSize, numRows * cellSize);
+  }
+  for (let r = 0; r <= numRows; r++) {
+    p.line(0, r * cellSize, numCols * cellSize, r * cellSize);
+  }
+  p.pop();
 }
 
-/**
- * Update canvas size based on grid settings
- */
-export function updateCanvasSize() {
-  canvas.width = grid.cols * grid.cellSize + Math.abs(grid.offsetX) * 2;
-  canvas.height = grid.rows * grid.cellSize + Math.abs(grid.offsetY) * 2;
-}
+// ── Export helper: draw a cell onto an offscreen buffer ───────
+// (used by export.js to render scaled versions)
 
-/**
- * Get animation time value (0-1 loop)
- * @param {number} frameCount - current frame
- * @returns {number} - normalized time (0-1)
- */
-export function getAnimationTime(frameCount) {
-  if (!animation.enabled) return 0;
-  
-  const loopFrames = animation.loopDuration;
-  const frame = frameCount % loopFrames;
-  return frame / loopFrames;
-}
+export { drawCell as drawCellExport };

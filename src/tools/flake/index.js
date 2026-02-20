@@ -1,247 +1,181 @@
 // ============================================================
-// Flake Tool Adapter for Creative Suite
+// FLAKE Tool — Entry point for Creative Suite
 // ============================================================
 
 import p5 from 'p5';
-import { canvas, grid, shape, pattern, animation, customShape, mask } from './state.js';
-import { updateCanvasSize, getAnimationTime, getGridCells, getShapeSize, getShapeRotation, getFillColor, getStrokeColor } from './grid.js';
+import {
+  canvas, pattern, style, motion, customShape, mask,
+  computeCanvasSize,
+} from './state.js';
+import { renderPattern } from './grid.js';
 import { setupUI, refreshUI, setStatus } from './ui.js';
-import { drawShape } from './shapes/library.js';
-import { drawSVGPath, loadSVGFile, parseSVG } from './shapes/svg.js';
-import { exportComposition, getIsRecording } from './export.js';
+import { loadSVGFile } from './shapes/svg.js';
+import { exportComposition } from './export.js';
+import { importState } from './presets.js';
 
 export async function loadFlakeTool(canvasContainer, paneContainer) {
-  let p5Instance = null;
-  let uiInstance = null;
-  let frameCount = 0;
-  let isSetup = false;
+  let p5Instance  = null;
+  let uiInstance  = null;
+  let frameCount  = 0;
+  let isSetup     = false;
 
   const sketch = (p) => {
     p.setup = () => {
-      updateCanvasSize();
-      
+      syncCanvasSize();
+
       const cnv = p.createCanvas(canvas.width, canvas.height);
       cnv.parent(canvasContainer);
       p.pixelDensity(1);
-      
-      uiInstance = setupUI({
-        onParamChange: () => p.redraw(),
-        onGridChange: () => {
-          updateCanvasSize();
+
+      uiInstance = setupUI(paneContainer, {
+        onParamChange:     () => p.redraw(),
+        onGridChange:      () => {
+          syncCanvasSize();
           p.resizeCanvas(canvas.width, canvas.height);
           p.redraw();
         },
         onAnimationChange: () => {
-          if (animation.playing) {
+          if (motion.playing && motion.motionType !== 'none') {
             p.loop();
           } else {
             p.noLoop();
             p.redraw();
           }
         },
-        onExport: () => exportComposition(p, frameCount),
+        onExport:          () => exportComposition(p, frameCount),
+        onMaskUpload:      () => {
+          const input = document.getElementById('fileInput');
+          if (input) {
+            input.setAttribute('accept', 'image/*');
+            input.click();
+          }
+        },
       });
-      
+
+      // Drag-and-drop on canvas area (file-input clicks are handled globally)
       setupDragDrop(p);
-      
+
       p.noLoop();
       isSetup = true;
     };
 
     p.draw = () => {
       if (!isSetup) return;
-      
-      p.background(canvas.background);
-      
-      const time = animation.enabled ? getAnimationTime(frameCount) : 0;
-      
-      if (canvas.showGrid) {
-        drawGrid(p);
-      }
-      
-      const cells = getGridCells();
-      
-      for (let i = 0; i < cells.length; i++) {
-        drawCell(p, cells[i], i, time);
-      }
-      
-      if (animation.playing) {
-        frameCount += animation.speed;
+
+      const time = (frameCount % 600) / 600;
+      renderPattern(p, time);
+
+      if (motion.playing && motion.motionType !== 'none') {
+        frameCount += motion.speed;
       }
     };
 
     p.windowResized = () => {
+      syncCanvasSize();
+      p.resizeCanvas(canvas.width, canvas.height);
       p.redraw();
     };
   };
 
-  function drawCell(p, cell, index, time) {
-    const { x, y, dist } = cell;
-    
-    let size = getShapeSize(dist, time);
-    let rotation = getShapeRotation(dist, shape.rotation, time);
-    
-    if (animation.enabled && animation.playing) {
-      if (animation.animateSize) {
-        const noise = Math.sin(time * Math.PI * 2 + index * 0.1) * 0.5 + 0.5;
-        size *= 0.7 + noise * 0.6;
-      }
-      if (animation.animateRotation) {
-        rotation += time * 360 * animation.speed;
-      }
-    }
-    
-    const fill = getFillColor(dist, index, time);
-    const stroke = getStrokeColor(dist, index);
-    
-    const blendMode = shape.blendMode;
-    if (blendMode !== 'blend' && p[blendMode.toUpperCase()]) {
-      p.blendMode(p[blendMode.toUpperCase()]);
-    }
-    
-    const fillColor = p.color(fill);
-    fillColor.setAlpha(shape.fillOpacity * 255);
-    p.fill(fillColor);
-    
-    if (stroke && shape.strokeMode !== 'none') {
-      const strokeColor = p.color(stroke);
-      strokeColor.setAlpha(shape.strokeOpacity * 255);
-      p.stroke(strokeColor);
-      p.strokeWeight(shape.strokeWeight);
-    } else {
-      p.noStroke();
-    }
-    
-    if (shape.type === 'custom' && customShape.paths.length > 0) {
-      const path = customShape.paths[0];
-      drawSVGPath(p, path, x, y, size, customShape.bounds, rotation);
-    } else {
-      drawShape(p, shape.type, x, y, size, rotation);
-    }
-    
-    p.blendMode(p.BLEND);
+  // ── Canvas size helper ──────────────────────────────────────
+  function syncCanvasSize() {
+    const sidebarW = 280;
+    const paneW    = 320;
+    const availW   = (window.innerWidth  - sidebarW - paneW) * 0.97;
+    const availH   = window.innerHeight * 0.97;
+    computeCanvasSize(availW, availH);
   }
 
-  function drawGrid(p) {
-    p.stroke(canvas.gridColor);
-    p.strokeWeight(1);
-    p.noFill();
-    
-    for (let col = 0; col <= grid.cols; col++) {
-      const x = col * grid.cellSize + grid.offsetX;
-      p.line(x, grid.offsetY, x, grid.rows * grid.cellSize + grid.offsetY);
-    }
-    
-    for (let row = 0; row <= grid.rows; row++) {
-      const y = row * grid.cellSize + grid.offsetY;
-      p.line(grid.offsetX, y, grid.cols * grid.cellSize + grid.offsetX, y);
-    }
-    
-    const center = {
-      x: (grid.cols * grid.cellSize) / 2 + grid.offsetX,
-      y: (grid.rows * grid.cellSize) / 2 + grid.offsetY,
-    };
-    p.fill('#ff0000');
-    p.noStroke();
-    p.ellipse(center.x, center.y, 8, 8);
-  }
-
+  // ── Drag-and-drop (canvas only — no duplicate fileInput listener) ──
   function setupDragDrop(p) {
-    const container = canvasContainer;
-    const fileInput = document.getElementById('fileInput');
-    
-    if (!container || !fileInput) return;
-    
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) handleFile(p, file);
-      fileInput.value = '';
-    });
-    
-    container.addEventListener('dragover', (e) => {
+    canvasContainer.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      container.classList.add('drag-over');
+      canvasContainer.classList.add('drag-over');
     });
-    
-    container.addEventListener('dragleave', (e) => {
+
+    canvasContainer.addEventListener('dragleave', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      container.classList.remove('drag-over');
+      canvasContainer.classList.remove('drag-over');
     });
-    
-    container.addEventListener('drop', (e) => {
+
+    canvasContainer.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      container.classList.remove('drag-over');
-      
+      canvasContainer.classList.remove('drag-over');
       const file = e.dataTransfer.files[0];
-      if (file) handleFile(p, file);
+      if (file) processFile(p, file);
     });
   }
 
-  async function handleFile(p, file) {
-    const type = file.type;
+  // ── File handling ───────────────────────────────────────────
+  async function processFile(p, file) {
     const name = file.name.toLowerCase();
-    
+    const type = file.type;
+
     try {
       if (type === 'image/svg+xml' || name.endsWith('.svg')) {
-        setStatus('Loading SVG...');
-        const data = await loadSVGFile(file);
-        customShape.paths = data.paths;
-        customShape.bounds = data.bounds;
-        customShape.name = file.name;
+        setStatus('Loading SVG…');
+        const data          = await loadSVGFile(file);
+        customShape.paths   = data.paths;
+        customShape.bounds  = data.bounds;
+        customShape.name    = file.name;
         customShape.svgData = data;
-        
-        shape.type = 'custom';
+        // Automatically switch to custom shape
+        style.shapeType = 'custom';
         refreshUI();
-        
         p.redraw();
-        
         setStatus('SVG loaded!');
         setTimeout(() => setStatus('Ready'), 2000);
-        
+
       } else if (type.startsWith('image/')) {
-        setStatus('Loading image...');
-        const img = await loadImage(p, file);
-        mask.image = img;
-        mask.enabled = true;
-        
+        setStatus('Loading mask…');
+        const img       = await loadP5Image(p, file);
+        mask.image      = img;
+        mask.maskTool   = 'image';
+        refreshUI();
         p.redraw();
-        
-        setStatus('Image loaded!');
+        setStatus('Mask loaded!');
         setTimeout(() => setStatus('Ready'), 2000);
+
+      } else if (name.endsWith('.json')) {
+        const text = await file.text();
+        if (importState(text)) {
+          refreshUI();
+          syncCanvasSize();
+          p.resizeCanvas(canvas.width, canvas.height);
+          p.redraw();
+          setStatus('Preset imported!');
+          setTimeout(() => setStatus('Ready'), 2000);
+        }
       }
     } catch (err) {
-      console.error('Failed to load file:', err);
+      console.error('FLAKE: failed to load file', err);
       setStatus('Error loading file');
       setTimeout(() => setStatus('Ready'), 2000);
     }
   }
 
-  function loadImage(p, file) {
+  function loadP5Image(p, file) {
     return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
-      p.loadImage(url, 
-        (img) => {
-          URL.revokeObjectURL(url);
-          resolve(img);
-        },
-        () => {
-          URL.revokeObjectURL(url);
-          reject(new Error('Failed to load image'));
-        }
+      p.loadImage(url,
+        (img) => { URL.revokeObjectURL(url); resolve(img); },
+        ()    => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); }
       );
     });
   }
 
+  // ── Boot ────────────────────────────────────────────────────
   p5Instance = new p5(sketch, canvasContainer);
 
   return {
     p5Instance,
     uiInstance,
     handleFile: (file) => {
-      handleFile(p5Instance, file);
-    }
+      // Called by src/main.js when a file is chosen via the global file input
+      processFile(p5Instance, file);
+    },
   };
 }
