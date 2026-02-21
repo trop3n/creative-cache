@@ -102,6 +102,9 @@ temp/
 *.tar
 *.zip
 
+# png
+*.png
+
 # Optional: Uncomment if you want to ignore source maps in dev
 # *.js.map
 # *.css.map
