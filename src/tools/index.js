@@ -87,8 +87,19 @@ export const tools = {
       const { loadBoidsTool } = await import('./boids/index.js');
       return loadBoidsTool(canvasContainer, paneContainer);
     }
+  },
+
+  track: {
+    id: 'track',
+    name: 'TRACK',
+    description: 'Motion tracking effects',
+    accept: 'video/*,.json',
+    load: async (canvasContainer, paneContainer) => {
+      const { loadTrackTool } = await import('./track/index.js');
+      return loadTrackTool(canvasContainer, paneContainer);
+    }
   }
 };
 
 // Tool order for navigation
-export const toolOrder = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm', 'boids'];
+export const toolOrder = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm', 'boids', 'track'];

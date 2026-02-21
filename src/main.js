@@ -157,9 +157,9 @@ function setupEventListeners() {
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     // Cmd/Ctrl + number to switch tools
-    if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '7') {
+    if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '8') {
       e.preventDefault();
-      const toolIds = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm', 'boids'];
+      const toolIds = ['dither', 'flake', 'refract', 'split', 'textr', 'rhythm', 'boids', 'track'];
       const index = parseInt(e.key) - 1;
       if (toolIds[index]) {
         loadTool(toolIds[index]);
