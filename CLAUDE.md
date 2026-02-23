@@ -16,7 +16,7 @@ No tests are configured yet (`npm test` is a placeholder).
 
 ## Architecture
 
-Creative Suite is a modular Electron + Vite web app combining 7 generative art tools: DITHR (image dithering), FLAKE (grid patterns), REFRACT (image displacement), SPLITX (vector duplication), TEXTR (typography), RITM (rhythm visualizer), and BOIDS (flocking simulation).
+Creative Suite is a modular Electron + Vite web app combining 8 generative art tools: DITHR (image dithering), FLAKE (grid patterns), REFRACT (image displacement), SPLITX (vector duplication), TEXTR (typography), RITM (rhythm visualizer), BOIDS (flocking simulation), and TRACK (motion tracking effects).
 
 **Tool loading flow** — `src/main.js` is the app router. When the user switches tools, it:
 1. Cleans up the current tool (calls `p5Instance.remove()`, disposes UI)
@@ -34,10 +34,12 @@ Common optional files (use as needed):
 - `presets.js` — named preset configurations
 - `export.js` — export/save logic
 - `shaders.js` — GLSL shader strings (used by dither, refract)
+- `effects.js` — post-processing or visual effects pipeline
+- `motion.js` — motion analysis / tracking logic
 
 **Tool registry** — `src/tools/index.js` maps tool IDs to metadata and lazy-import loaders, and exports `toolOrder` for navigation. Adding a new tool requires: adding an entry here, adding a sidebar button in `index.html`, and creating the tool directory.
 
-**Keyboard shortcuts** — `Ctrl/Cmd + 1–7` switches between tools in `toolOrder` sequence.
+**Keyboard shortcuts** — `Ctrl/Cmd + 1–8` switches between tools in `toolOrder` sequence.
 
 **Electron IPC** — `electron/preload.js` exposes `window.electronAPI` (tool switching, file open, save dialog). Always guard Electron-specific code:
 ```javascript

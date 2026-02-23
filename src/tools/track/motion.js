@@ -11,6 +11,8 @@ export class MotionDetector {
     this.prevFrame = null;
     this.diffBuffer = new Uint8ClampedArray(width * height);
     this.blobs = [];
+    this.trackedBlobs = [];
+    this.nextId = 1;
   }
 
   resize(width, height) {
@@ -19,14 +21,16 @@ export class MotionDetector {
     this.prevFrame = null;
     this.diffBuffer = new Uint8ClampedArray(width * height);
     this.blobs = [];
+    this.trackedBlobs = [];
+    this.nextId = 1;
   }
 
   detect(currentFrame) {
     if (!currentFrame) return [];
-    
+
     const { width, height, diffBuffer } = this;
     const data = currentFrame.data;
-    
+
     if (!this.prevFrame) {
       this.prevFrame = new Uint8ClampedArray(data.length);
       this.prevFrame.set(data);
@@ -35,23 +39,16 @@ export class MotionDetector {
 
     const threshold = motion.threshold;
     const sensitivity = motion.sensitivity;
-    
+
     for (let i = 0; i < width * height; i++) {
       const idx = i * 4;
-      const r = data[idx];
-      const g = data[idx + 1];
-      const b = data[idx + 2];
-      
-      const gray = (r * 0.299 + g * 0.587 + b * 0.114);
-      
-      const prevIdx = idx;
-      const prevGray = (
-        this.prevFrame[prevIdx] * 0.299 +
-        this.prevFrame[prevIdx + 1] * 0.587 +
-        this.prevFrame[prevIdx + 2] * 0.114
-      );
-      
-      let diff = Math.abs(gray - prevGray) * sensitivity;
+      const gray = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+      const prevGray =
+        this.prevFrame[idx] * 0.299 +
+        this.prevFrame[idx + 1] * 0.587 +
+        this.prevFrame[idx + 2] * 0.114;
+
+      const diff = Math.abs(gray - prevGray) * sensitivity;
       diffBuffer[i] = diff > threshold ? Math.min(255, diff * 2) : 0;
     }
 
@@ -60,21 +57,24 @@ export class MotionDetector {
     }
 
     this.prevFrame.set(data);
-    
-    this.blobs = this.findBlobs(diffBuffer, width, height);
-    
+
+    const rawBlobs = this.findBlobs(diffBuffer, width, height)
+      .slice(0, motion.maxBlobs);
+
+    this.blobs = this.trackAndSmooth(rawBlobs);
     return this.blobs;
   }
+
+  // ---- Spatial blur ----
 
   applyBlur(buffer, width, height, radius) {
     const temp = new Uint8ClampedArray(buffer.length);
     const r = Math.ceil(radius);
-    
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         let sum = 0;
         let count = 0;
-        
         for (let dy = -r; dy <= r; dy++) {
           for (let dx = -r; dx <= r; dx++) {
             const nx = x + dx;
@@ -85,48 +85,51 @@ export class MotionDetector {
             }
           }
         }
-        
         temp[y * width + x] = Math.round(sum / count);
       }
     }
-    
+
     buffer.set(temp);
   }
+
+  // ---- Connected-component labeling ----
 
   findBlobs(buffer, width, height) {
     const labels = new Int32Array(width * height);
     let currentLabel = 0;
     const minSize = motion.minBlobSize;
-    
+
     const parent = [];
-    
+
+    // Iterative path-compressed find (replaces recursive version to avoid stack overflow)
     function find(x) {
-      if (parent[x] !== x) {
-        parent[x] = find(parent[x]);
+      let root = x;
+      while (parent[root] !== root) root = parent[root];
+      // Path compression
+      let curr = x;
+      while (parent[curr] !== root) {
+        const next = parent[curr];
+        parent[curr] = root;
+        curr = next;
       }
-      return parent[x];
+      return root;
     }
-    
+
     function union(a, b) {
       const rootA = find(a);
       const rootB = find(b);
-      if (rootA !== rootB) {
-        parent[rootB] = rootA;
-      }
+      if (rootA !== rootB) parent[rootB] = rootA;
     }
 
+    // First pass: label connected foreground pixels
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
-        
-        if (buffer[idx] === 0) {
-          labels[idx] = 0;
-          continue;
-        }
-        
+        if (buffer[idx] === 0) { labels[idx] = 0; continue; }
+
         const left = x > 0 ? labels[idx - 1] : 0;
-        const top = y > 0 ? labels[idx - width] : 0;
-        
+        const top  = y > 0 ? labels[idx - width] : 0;
+
         if (left === 0 && top === 0) {
           currentLabel++;
           parent[currentLabel] = currentLabel;
@@ -137,35 +140,33 @@ export class MotionDetector {
           labels[idx] = top;
         } else {
           labels[idx] = Math.min(left, top);
-          if (left !== top) {
-            union(left, top);
-          }
+          if (left !== top) union(left, top);
         }
       }
     }
 
+    // Second pass: accumulate blob stats using canonical root labels
     const blobData = new Map();
-    
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
         let label = labels[idx];
-        
         if (label === 0) continue;
-        
+
         label = find(label);
         labels[idx] = label;
-        
+
         if (!blobData.has(label)) {
           blobData.set(label, {
             minX: x, maxX: x,
             minY: y, maxY: y,
             sumX: 0, sumY: 0,
             count: 0,
-            totalIntensity: 0
+            totalIntensity: 0,
           });
         }
-        
+
         const blob = blobData.get(label);
         blob.minX = Math.min(blob.minX, x);
         blob.maxX = Math.max(blob.maxX, x);
@@ -179,7 +180,7 @@ export class MotionDetector {
     }
 
     const blobs = [];
-    for (const [label, data] of blobData) {
+    for (const [, data] of blobData) {
       if (data.count >= minSize) {
         blobs.push({
           x: data.sumX / data.count,
@@ -192,14 +193,63 @@ export class MotionDetector {
             x: data.minX,
             y: data.minY,
             w: data.maxX - data.minX + 1,
-            h: data.maxY - data.minY + 1
-          }
+            h: data.maxY - data.minY + 1,
+          },
         });
       }
     }
-    
+
     return blobs.sort((a, b) => b.size - a.size);
   }
+
+  // ---- Temporal tracking: assign stable IDs and smooth positions ----
+
+  trackAndSmooth(newBlobs) {
+    const smooth = motion.smooth;
+    const maxMatchDist = 100; // pixels (at perf resolution)
+
+    if (this.trackedBlobs.length === 0) {
+      const result = newBlobs.map(b => ({ ...b, id: this.nextId++ }));
+      this.trackedBlobs = result;
+      return result;
+    }
+
+    const prev = this.trackedBlobs;
+    const assigned = new Set();
+    const result = [];
+
+    for (const blob of newBlobs) {
+      let bestDist = maxMatchDist;
+      let bestIdx = -1;
+
+      for (let i = 0; i < prev.length; i++) {
+        if (assigned.has(i)) continue;
+        const dist = Math.hypot(blob.x - prev[i].x, blob.y - prev[i].y);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = i;
+        }
+      }
+
+      if (bestIdx >= 0) {
+        assigned.add(bestIdx);
+        const p = prev[bestIdx];
+        result.push({
+          ...blob,
+          id: p.id,
+          x: p.x * smooth + blob.x * (1 - smooth),
+          y: p.y * smooth + blob.y * (1 - smooth),
+        });
+      } else {
+        result.push({ ...blob, id: this.nextId++ });
+      }
+    }
+
+    this.trackedBlobs = result;
+    return result;
+  }
+
+  // ---- Accessors ----
 
   getDiffBuffer() {
     return this.diffBuffer;
@@ -208,7 +258,6 @@ export class MotionDetector {
   getDiffImageData() {
     const imageData = new ImageData(this.width, this.height);
     const data = imageData.data;
-    
     for (let i = 0; i < this.diffBuffer.length; i++) {
       const idx = i * 4;
       const val = this.diffBuffer[i];
@@ -217,7 +266,6 @@ export class MotionDetector {
       data[idx + 2] = val;
       data[idx + 3] = 255;
     }
-    
     return imageData;
   }
 
@@ -225,5 +273,6 @@ export class MotionDetector {
     this.prevFrame = null;
     this.diffBuffer = null;
     this.blobs = [];
+    this.trackedBlobs = [];
   }
 }

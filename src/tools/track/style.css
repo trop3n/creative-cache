@@ -1,0 +1,698 @@
+/* ============================================================
+   TRACK — Custom Panel Styles
+   ============================================================ */
+
+/* ---- Panel shell ---- */
+
+.tr-panel {
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 13px;
+  color: #c8c8c8;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Sections ---- */
+
+.tr-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid #1e1e1e;
+}
+
+.tr-section:last-child {
+  border-bottom: none;
+}
+
+/* ---- Section headers ---- */
+
+.tr-section-hdr {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  letter-spacing: 0.2px;
+}
+
+.tr-hdr-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.tr-perf-label {
+  margin-left: auto;
+  font-size: 11px;
+  color: #c0c0c0;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.tr-random-btn {
+  margin-left: auto;
+  padding: 3px 10px;
+  background: transparent;
+  border: 1px solid #363636;
+  border-radius: 10px;
+  color: #777;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.tr-random-btn:hover {
+  border-color: #555;
+  color: #c0c0c0;
+}
+
+/* ---- Subsection labels ---- */
+
+.tr-subsection-label {
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 8px;
+  margin-top: 2px;
+}
+
+/* ---- Source / export buttons ---- */
+
+.tr-btn-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-bottom: 7px;
+}
+
+.tr-btn-row:last-child {
+  margin-bottom: 0;
+}
+
+.tr-btn-row.single {
+  grid-template-columns: 1fr;
+}
+
+.tr-btn {
+  padding: 8px 10px;
+  background: #1c1c1c;
+  border: 1px solid #2e2e2e;
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.tr-btn:hover {
+  background: #242424;
+  border-color: #444;
+  color: #d0d0d0;
+}
+
+.tr-btn:active {
+  background: #2a2a2a;
+}
+
+/* ---- Speed buttons ---- */
+
+.tr-speed-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.tr-speed-btn {
+  padding: 7px 4px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 20px;
+  color: #666;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+.tr-speed-btn:hover {
+  border-color: #444;
+  color: #aaa;
+}
+
+.tr-speed-btn.active {
+  background: #e8e8e8;
+  border-color: #e8e8e8;
+  color: #111;
+}
+
+/* ---- Performance slider ---- */
+
+.tr-slider {
+  width: 100%;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: linear-gradient(to right, #555 0%, #555 calc(var(--val, 66.7%) ), #2a2a2a calc(var(--val, 66.7%)));
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.tr-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c8c8c8;
+  cursor: pointer;
+  border: 2px solid #3a3a3a;
+  transition: background 0.12s, transform 0.1s;
+}
+
+.tr-slider::-webkit-slider-thumb:hover {
+  background: #fff;
+  transform: scale(1.1);
+}
+
+.tr-slider::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #c8c8c8;
+  cursor: pointer;
+  border: 2px solid #3a3a3a;
+}
+
+/* ---- Shape buttons ---- */
+
+.tr-shape-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.tr-shape-btn {
+  padding: 14px 8px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 7px;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tr-shape-btn:hover {
+  border-color: #444;
+  color: #aaa;
+}
+
+.tr-shape-btn.active {
+  background: #212121;
+  border-color: #888;
+  color: #ddd;
+}
+
+/* Shape icons drawn with CSS borders */
+
+.tr-shape-icon {
+  display: inline-block;
+  border: 2px solid currentColor;
+  border-radius: 0;
+}
+
+.tr-shape-icon.square {
+  width: 18px;
+  height: 18px;
+}
+
+.tr-shape-icon.circle {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.tr-shape-icon.rect {
+  width: 26px;
+  height: 16px;
+}
+
+/* ---- 3-column grid buttons (region / filter) ---- */
+
+.tr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.tr-grid-btn {
+  padding: 6px 2px;
+  background: #1a1a1a;
+  border: 1px solid #272727;
+  border-radius: 5px;
+  color: #666;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+}
+
+.tr-grid-btn:hover {
+  border-color: #3e3e3e;
+  color: #aaa;
+}
+
+.tr-grid-btn.active {
+  background: #1e1e1e;
+  border-color: #777;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+/* ---- Filter effects header (label + Invert/Fusion toggles) ---- */
+
+.tr-filter-hdr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  margin-top: 4px;
+}
+
+.tr-filter-label {
+  font-size: 11px;
+  color: #555;
+  flex-shrink: 0;
+}
+
+.tr-toggles {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.tr-toggle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #777;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tr-toggle-wrap:hover {
+  color: #aaa;
+}
+
+/* Custom round toggle (checkbox) */
+
+.tr-toggle {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid #444;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.tr-toggle:checked {
+  background: #888;
+  border-color: #888;
+}
+
+.tr-toggle:hover {
+  border-color: #666;
+}
+
+/* ---- Badges ---- */
+
+.tr-badge-pro {
+  padding: 1px 5px;
+  background: #b8960c;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+
+.tr-badge-new {
+  padding: 1px 5px;
+  background: #2a6fcc;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  line-height: 1.6;
+  flex-shrink: 0;
+}
+
+/* ---- Spacer (flex push-right) ---- */
+
+.tr-spacer {
+  flex: 1;
+}
+
+/* ---- iOS-style pill switch ---- */
+
+.tr-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.tr-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.tr-switch-track {
+  display: block;
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: #333;
+  border: 1px solid #444;
+  position: relative;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.tr-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #555;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.tr-switch input:checked + .tr-switch-track {
+  background: #555;
+  border-color: #777;
+}
+
+.tr-switch input:checked + .tr-switch-track::after {
+  transform: translateX(12px);
+  background: #e0e0e0;
+}
+
+/* ---- Inline toggle (checkbox + label in header) ---- */
+
+.tr-inline-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #666;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tr-inline-toggle:hover {
+  color: #aaa;
+}
+
+.tr-inline-toggle input {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid #444;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+}
+
+.tr-inline-toggle input:checked {
+  background: #888;
+  border-color: #888;
+}
+
+/* ---- Subsection label with inline items ---- */
+
+.tr-subsection-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #555;
+  margin-bottom: 7px;
+  margin-top: 2px;
+}
+
+/* ---- Line style icon grid ---- */
+
+.tr-line-style-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.tr-line-btn {
+  padding: 8px 4px;
+  background: #1a1a1a;
+  border: 1px solid #272727;
+  border-radius: 5px;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.tr-line-btn:hover {
+  border-color: #3e3e3e;
+  color: #aaa;
+}
+
+.tr-line-btn.active {
+  background: #1e1e1e;
+  border-color: #777;
+  color: #e0e0e0;
+}
+
+.tr-line-btn svg {
+  display: block;
+}
+
+/* ---- Connection rate buttons ---- */
+
+.tr-rate-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.tr-rate-btn {
+  padding: 6px 2px;
+  background: #1a1a1a;
+  border: 1px solid #272727;
+  border-radius: 5px;
+  color: #666;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.tr-rate-btn:hover {
+  border-color: #3e3e3e;
+  color: #aaa;
+}
+
+.tr-rate-btn.active {
+  background: #1e1e1e;
+  border-color: #777;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+/* ---- Mode buttons (2-col, white active) ---- */
+
+.tr-mode-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+/* 2-col variant for Blob Count mode */
+.tr-mode-row.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.tr-mode-btn {
+  padding: 7px 6px;
+  background: #1a1a1a;
+  border: 1px solid #2e2e2e;
+  border-radius: 5px;
+  color: #555;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.tr-mode-btn:hover {
+  border-color: #444;
+  color: #aaa;
+}
+
+.tr-mode-btn.active {
+  background: #e8e8e8;
+  border-color: #e8e8e8;
+  color: #111;
+  font-weight: 600;
+}
+
+/* ---- Count / size value buttons (6-col) ---- */
+
+.tr-count-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+  margin-bottom: 4px;
+}
+
+.tr-count-btn {
+  padding: 6px 2px;
+  background: #1a1a1a;
+  border: 1px solid #272727;
+  border-radius: 5px;
+  color: #666;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.tr-count-btn:hover {
+  border-color: #3e3e3e;
+  color: #aaa;
+}
+
+.tr-count-btn.active {
+  background: #1e1e1e;
+  border-color: #777;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+/* ---- Audio type buttons (4-col) ---- */
+
+.tr-audio-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+  margin-bottom: 7px;
+}
+
+.tr-audio-btn {
+  padding: 6px 4px;
+  background: #1a1a1a;
+  border: 1px solid #272727;
+  border-radius: 5px;
+  color: #666;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.tr-audio-btn:hover {
+  border-color: #3e3e3e;
+  color: #aaa;
+}
+
+.tr-audio-btn.active {
+  background: #1e1e1e;
+  border-color: #777;
+  color: #e0e0e0;
+  font-weight: 600;
+}
+
+/* ---- Color palette grid ---- */
+
+.tr-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.tr-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.1s, border-color 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tr-swatch:hover {
+  transform: scale(1.1);
+}
+
+.tr-swatch.active {
+  border-color: #fff;
+}
+
+.tr-swatch-check {
+  font-size: 10px;
+  color: #000;
+  font-weight: 700;
+  pointer-events: none;
+}

@@ -61,15 +61,7 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
         },
         
         onSourceReady: (video) => {
-          const size = { width: video.videoWidth || 640, height: video.videoHeight || 480 };
-          const aspect = size.width / size.height;
-          
-          if (aspect > 1) {
-            canvas.aspectRatio = '16:9';
-          } else {
-            canvas.aspectRatio = '9:16';
-          }
-          updateCanvasSize();
+          updateCanvasSize(video.videoWidth || 640, video.videoHeight || 480);
           p.resizeCanvas(canvas.width, canvas.height);
           videoBuffer.setSize(canvas.width, canvas.height);
           
@@ -135,6 +127,7 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
         p.image(videoBuffer, 0, 0);
       }
 
+      effectRenderer.applyFilter(p, motionDetector.getDiffBuffer(), perfRes);
       effectRenderer.render(p, blobs);
     };
 
@@ -186,12 +179,14 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
       a.click();
       URL.revokeObjectURL(url);
       isRecording = false;
+      exportSettings.recording = false;
       setStatus('Video saved!');
       setTimeout(() => setStatus('Ready'), 2000);
     };
 
     mediaRecorder.start();
     isRecording = true;
+    exportSettings.recording = true;
     setStatus('Recording… click Export WebM to stop');
   }
 
@@ -203,15 +198,7 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
     handleFile: (file) => {
       if (file.type.startsWith('video/')) {
         loadVideoFile(file, (video) => {
-          const size = { width: video.videoWidth, height: video.videoHeight };
-          const aspect = size.width / size.height;
-          
-          if (aspect > 1) {
-            canvas.aspectRatio = '16:9';
-          } else {
-            canvas.aspectRatio = '9:16';
-          }
-          updateCanvasSize();
+          updateCanvasSize(video.videoWidth, video.videoHeight);
           p5Instance.resizeCanvas(canvas.width, canvas.height);
           videoBuffer.setSize(canvas.width, canvas.height);
           

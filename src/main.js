@@ -235,13 +235,61 @@ export function getCurrentToolId() {
 }
 
 // ============================================================
+// Canvas Fitting — scale canvas CSS dimensions to fill wrapper
+// ============================================================
+
+let _canvasAttrObserver = null;
+
+function fitCanvasToWrapper() {
+  const canvas = elements.canvasWrapper.querySelector('canvas');
+  if (!canvas || !canvas.width || !canvas.height) return;
+
+  // Leave 16px on each side so the box-shadow isn't flush against the panel edges
+  const margin = 32;
+  const availW = elements.canvasWrapper.clientWidth  - margin;
+  const availH = elements.canvasWrapper.clientHeight - margin;
+
+  const scale = Math.min(availW / canvas.width, availH / canvas.height);
+  canvas.style.width  = `${Math.round(canvas.width  * scale)}px`;
+  canvas.style.height = `${Math.round(canvas.height * scale)}px`;
+}
+
+function setupCanvasFitting() {
+  // Re-fit whenever the wrapper itself is resized (window resize, panel toggle, etc.)
+  const resizeObserver = new ResizeObserver(fitCanvasToWrapper);
+  resizeObserver.observe(elements.canvasWrapper);
+
+  // Re-fit whenever a canvas is added/removed or its buffer dimensions change
+  const mutationObserver = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.removedNodes) {
+        if (node.tagName === 'CANVAS') {
+          _canvasAttrObserver?.disconnect();
+          _canvasAttrObserver = null;
+        }
+      }
+      for (const node of mutation.addedNodes) {
+        if (node.tagName === 'CANVAS') {
+          fitCanvasToWrapper();
+          _canvasAttrObserver?.disconnect();
+          _canvasAttrObserver = new MutationObserver(fitCanvasToWrapper);
+          _canvasAttrObserver.observe(node, { attributes: true, attributeFilter: ['width', 'height'] });
+        }
+      }
+    }
+  });
+  mutationObserver.observe(elements.canvasWrapper, { childList: true });
+}
+
+// ============================================================
 // Initialization
 // ============================================================
 
 function init() {
   setupEventListeners();
   setupElectronIntegration();
-  
+  setupCanvasFitting();
+
   // Load first tool (Dither)
   loadTool('dither');
 }

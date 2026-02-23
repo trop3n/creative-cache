@@ -10,10 +10,10 @@ export const canvas = {
 };
 
 export const aspectRatioOptions = {
-  '1:1': { w: 640, h: 640 },
-  '4:3': { w: 640, h: 480 },
-  '16:9': { w: 640, h: 360 },
-  '9:16': { w: 360, h: 640 },
+  '1:1':  { w: 960,  h: 960  },
+  '4:3':  { w: 1280, h: 960  },
+  '16:9': { w: 1280, h: 720  },
+  '9:16': { w: 720,  h: 1280 },
 };
 
 export const source = {
@@ -33,10 +33,16 @@ export const playbackSpeedOptions = {
 
 export const motion = {
   threshold: 30,
+  sensitivity: 1.5,
   blur: 3,
   minBlobSize: 50,
+  maxBlobs: 8,
+  smooth: 0.4,
   performance: 4,
-  showVideo: false,
+  showVideo: true,
+  countMode: 'size',
+  countValue: 64,
+  singleTracking: false,
 };
 
 export const shape = {
@@ -45,7 +51,24 @@ export const shape = {
   strokeWidth: 2,
   color: '#00ff88',
   fillColor: '#00ff8833',
+  crazy: false,
+  showText: true,
+  textPosition: 'center',
+  textContent: 'random',
+  fontSize: 12,
+  separateColors: false,
+  palette: ['#00ff88'],
 };
+
+export const audio = {
+  type: 'none',
+};
+
+export const colorPalette = [
+  '#ffffff', '#00d4d4', '#00cc88', '#44cc44', '#88cc00', '#aaaa00', '#cc8800', '#ff6600',
+  '#ff44aa', '#cc44cc', '#aa44ff', '#8844ff', '#6644cc', '#444488', '#0088cc', '#00aacc',
+  '#cccc00', '#ff8800', '#ff4466', '#cc0044',
+];
 
 export const shapeOptions = {
   'Square': 'square',
@@ -62,6 +85,8 @@ export const region = {
   particleCount: 8,
   dashLength: 8,
   glowIntensity: 0.6,
+  boundingSize: 128,
+  sameSize: false,
 };
 
 export const regionStyleOptions = {
@@ -79,6 +104,10 @@ export const regionStyleOptions = {
   'Glow': 'glow',
 };
 
+export const blink = {
+  enabled: false,
+};
+
 export const connection = {
   enabled: true,
   style: 'straight',
@@ -89,6 +118,9 @@ export const connection = {
   waveAmplitude: 8,
   waveFrequency: 3,
   pulseSpeed: 2,
+  rate: 0.25,
+  centralHub: false,
+  dashed: false,
 };
 
 export const connectionStyleOptions = {
@@ -112,7 +144,7 @@ export const filterEffectOptions = {
   'Thermal': 'thermal',
   'Pixel': 'pixel',
   'Tone': 'tone',
-  'Blue': 'blue',
+  'Blur': 'blur',
   'Dither': 'dither',
   'Zoom': 'zoom',
   'X-Ray': 'xray',
@@ -133,11 +165,33 @@ export const exportSettings = {
 // Helpers
 // ============================================================
 
-export function updateCanvasSize() {
-  const dims = aspectRatioOptions[canvas.aspectRatio];
-  if (dims) {
-    canvas.width = dims.w;
-    canvas.height = dims.h;
+/**
+ * Update canvas dimensions.
+ * When a video source is available, pass its native dimensions so the canvas
+ * renders 1:1 with the source (capped at 1280px on the longer side).
+ * Without arguments, falls back to the preset for the current aspect ratio.
+ * @param {number} [videoWidth]
+ * @param {number} [videoHeight]
+ */
+export function updateCanvasSize(videoWidth, videoHeight) {
+  if (videoWidth && videoHeight) {
+    const maxDim = 1280;
+    const scale = Math.min(1, maxDim / Math.max(videoWidth, videoHeight));
+    canvas.width  = Math.round(videoWidth  * scale);
+    canvas.height = Math.round(videoHeight * scale);
+
+    // Keep the aspect ratio label roughly in sync for the UI dropdown
+    const ratio = videoWidth / videoHeight;
+    if (Math.abs(ratio - 1) < 0.1)  canvas.aspectRatio = '1:1';
+    else if (ratio > 1.5)            canvas.aspectRatio = '16:9';
+    else if (ratio > 1)              canvas.aspectRatio = '4:3';
+    else                             canvas.aspectRatio = '9:16';
+  } else {
+    const dims = aspectRatioOptions[canvas.aspectRatio];
+    if (dims) {
+      canvas.width  = dims.w;
+      canvas.height = dims.h;
+    }
   }
 }
 
