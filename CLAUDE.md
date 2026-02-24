@@ -21,10 +21,10 @@ Creative Suite is a modular Electron + Vite web app combining 8 generative art t
 **Tool loading flow** — `src/main.js` is the app router. When the user switches tools, it:
 1. Cleans up the current tool (calls `p5Instance.remove()`, disposes UI)
 2. Dynamically imports the tool module
-3. Calls `load(canvasContainer, paneContainer)` and stores the returned `{ p5Instance, uiInstance, handleFile }`
+3. Calls `load(canvasContainer, paneContainer)` and stores the returned `{ p5Instance, uiInstance, handleFile, dispose? }`
 
 **Tool structure** — Each tool in `src/tools/[tool]/` is self-contained. The only required file is:
-- `index.js` — exports `loadToolName(canvasContainer, paneContainer)`, returns `{ p5Instance, uiInstance, handleFile }`
+- `index.js` — exports `loadToolName(canvasContainer, paneContainer)`, returns `{ p5Instance, uiInstance, handleFile, dispose? }` (dispose is called before p5Instance.remove() when switching tools)
 
 Common optional files (use as needed):
 - `state.js` — plain mutable config/state objects
@@ -33,7 +33,7 @@ Common optional files (use as needed):
 - `media.js` — file/asset handling
 - `presets.js` — named preset configurations
 - `export.js` — export/save logic
-- `shaders.js` — GLSL shader strings (used by dither, refract)
+- `shaders.js` — GLSL shader strings (used by dither, refract; these tools use p5.js WEBGL mode, not the default 2D renderer)
 - `effects.js` — post-processing or visual effects pipeline
 - `motion.js` — motion analysis / tracking logic
 
@@ -50,10 +50,12 @@ if (typeof window.electronAPI !== 'undefined') { ... }
 
 ## Key Dependencies
 
-- **p5.js** — canvas rendering, always instance mode with `pixelDensity(1)`
-- **Tweakpane** — right-pane UI controls
+- **p5.js v2.x** — canvas rendering, always instance mode with `pixelDensity(1)`; v2 has API changes from v1
+- **Tweakpane v4** — right-pane UI controls; v4 API differs significantly from v3
 - **paper.js** — vector graphics (used by split/SPLITX)
 - **simplex-noise** — noise generation
+
+**Canvas sizing** — `setupCanvasFitting()` in `src/main.js` uses ResizeObserver + MutationObserver to automatically scale the canvas CSS to fill the available space. Tools should create canvases at their intended buffer resolution and let the fitting system handle display scaling — do not manually fit canvases to the container.
 
 ## Code Conventions
 

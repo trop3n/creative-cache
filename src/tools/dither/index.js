@@ -119,7 +119,7 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
           // Use p5 image() for p5.Image; raw drawImage for video/canvas elements
           if (media.type === 'image' && media.source) {
             gImg.image(media.source, 0, 0, cnv.width, cnv.height);
-          } else if (media.type === 'video' && media.video) {
+          } else if (media.type === 'video' && media.video && media.video.readyState >= 2) {
             gImg.drawingContext.drawImage(media.video, 0, 0, cnv.width, cnv.height);
           }
           oldGImg.remove();
@@ -127,7 +127,7 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
         needsResize = false;
       }
 
-      if (media.type === 'video' && media.video) {
+      if (media.type === 'video' && media.video && media.video.readyState >= 2) {
         gImg.drawingContext.drawImage(media.video, 0, 0, gImg.width, gImg.height);
       } else if (media.type === 'obj' && media.model && obj3dBuffer) {
         renderObjScene(p);

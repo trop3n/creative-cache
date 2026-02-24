@@ -263,11 +263,11 @@ void main() {
   vec4 charSample = texture2D(u_asciiTexture, texCoord);
 
   vec4 finalColor = u_charColorMode == 0
-    ? vec4(processed.rgb * charSample.rgb, charSample.a)
+    ? vec4(imageMixed.rgb * charSample.rgb, charSample.a)
     : vec4(u_charColor * charSample.rgb, charSample.a);
 
   vec4 finalMixed = u_bgColorMode == 0
-    ? mix(vec4(processed.rgb, 1.0), finalColor, charSample.a)
+    ? mix(vec4(imageMixed.rgb, 1.0), finalColor, charSample.a)
     : mix(vec4(u_bgColor, 1.0), finalColor, charSample.a);
 
   gl_FragColor = vec4(finalMixed.rgb, alpha);

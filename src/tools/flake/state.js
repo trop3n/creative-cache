@@ -4,10 +4,11 @@
 
 // ── Canvas ───────────────────────────────────────────────────
 export const canvas = {
-  width: 800,
-  height: 600,
-  ratio: '4:3',
-  background: '#111111',
+  width:      800,
+  height:     600,
+  ratio:      '4:3',
+  scale:      0.97,
+  background: '#ffffff',
 };
 
 export const ratioOptions = {
@@ -21,138 +22,186 @@ export const ratioOptions = {
   '9:16': '9:16',
 };
 
-// ── Pattern / Sections ────────────────────────────────────────
-// "Pattern Cols" is the tile size: the grid repeats every N cells in X and Y.
+// ── Pattern ───────────────────────────────────────────────────
 export const pattern = {
-  cols: 10,          // cells per tile (square tile)
-  cellSize: 48,      // pixel size of one cell
-  cellOffset: 0,     // alternate-row brick offset (0–2 relative cell units)
-  seedFrom: 0,       // starting value added to seedNoise for variety
-  seedNoise: 3,      // base seed for the noise field
-  cellDivider: false, // draw cell grid lines
+  cells:        { x: 10, y: 10 },
+  cellOffset:   { x: 0, y: 0 },
+  seed:         0,
+  seedRandom:   0,
+  cellRotation: 0,
 };
 
-// ── Style ─────────────────────────────────────────────────────
+// ── Style (visual / color only) ───────────────────────────────
 export const style = {
-  shapeType: 'arrow',          // see shapeTypeOptions
-  fillMapping: 2,              // 0 = solid first color, 1–4 = N colors by distance
-  colors: ['#6c5ce7', '#ffffff', '#b2bec3', '#fdcb6e'],
-  shapeScale: 0.75,            // size relative to cellSize (0–2)
-  scalingEase: 'easeOut',      // how size falls off from tile center
-  baseRotation: 0,             // constant rotation added to every shape (degrees)
-  angleMult: -7,               // multiplier on the computed angle field
-  strokeWidth: 0,              // stroke weight (0 = no stroke)
-  strokeColor: '#ffffff',
-  blendMode: 'blend',
+  renderStyle: 'fill',               // fill | stroke | mixed
+  colorType:   'paletteTransition',  // solidColor | paletteSequence | paletteTransition
+  colors:      ['#6c5ce7', '#ffffff', '#b2bec3', '#fdcb6e'],
+  blendMode:   'multiply',
 };
 
-export const shapeTypeOptions = {
-  'Arrow':      'arrow',
-  'Circle':     'circle',
-  'Square':     'square',
-  'Triangle':   'triangle',
-  'Hexagon':    'hexagon',
-  'Star':       'star',
-  'Diamond':    'diamond',
-  'Cross':      'cross',
-  'Heart':      'heart',
-  'Custom SVG': 'custom',
+export const renderStyleOptions = {
+  'Fill':   'fill',
+  'Stroke': 'stroke',
+  'Mixed':  'mixed',
 };
 
-export const scalingEaseOptions = {
-  'None (Flat)':  'none',
-  'Linear':       'linear',
-  'Ease In':      'easeIn',
-  'Ease Out':     'easeOut',
-  'Ease In-Out':  'easeInOut',
-  'Step':         'step',
+export const colorTypeOptions = {
+  'Solid Color':         'solidColor',
+  'Palette Sequence':    'paletteSequence',
+  'Palette Transition':  'paletteTransition',
 };
 
 export const blendModeOptions = {
-  'Normal':     'blend',
-  'Add':        'add',
-  'Multiply':   'multiply',
-  'Screen':     'screen',
-  'Overlay':    'overlay',
-  'Difference': 'difference',
+  'Multiply':    'multiply',
+  'XOR':         'xor',
+  'Normal':      'source-over',
+  'Lighter':     'lighter',
+  'Screen':      'screen',
+  'Overlay':     'overlay',
+  'Darken':      'darken',
+  'Lighten':     'lighten',
+  'Color Dodge': 'color-dodge',
+  'Color Burn':  'color-burn',
+  'Hard Light':  'hard-light',
+  'Soft Light':  'soft-light',
+  'Exclusion':   'exclusion',
+  'Difference':  'difference',
 };
 
-// ── Noise ─────────────────────────────────────────────────────
+// ── Shape (NEW — split out from style) ────────────────────────
+export const shape = {
+  shapeType:    'flake',
+  gridMapping:  { x: 6, y: 6 },
+  shapeCount:   5000,
+  shapeScale:   0.75,
+  scalePower:   0.0,
+  scalingEase:  'none',
+  baseRotation: 0,
+  angleMult:    1.0,
+};
+
+export const shapeTypeOptions = {
+  'Square':       'square',
+  'Circle':       'circle',
+  'Oval':         'oval',
+  'Checker':      'checker',
+  'Triangle':     'triangle',
+  'Quad Circle':  'quadCircle',
+  'Three Dots':   'threeDots',
+  'Spark':        'spark',
+  'Cross':        'cross',
+  'Star':         'star',
+  'Heart':        'heart',
+  'Flash':        'flash',
+  'Pinhole':      'pinholeIndex',
+  'Arrow':        'arrow',
+  'Flower':       'flower',
+  'Flake':        'flake',
+  'Clips':        'clips',
+  'Custom SVG':   'custom',
+};
+
+export const scalingEaseOptions = {
+  'None':        'none',
+  'Linear':      'linear',
+  'Sine In':     'sineIn',
+  'Sine Out':    'sineOut',
+  'Quad In':     'quadIn',
+  'Quad Out':    'quadOut',
+  'Quad In-Out': 'quadInOut',
+  'Cubic In':    'cubicIn',
+  'Cubic Out':   'cubicOut',
+  'Cubic In-Out':'cubicInOut',
+  'Expo In':     'expoIn',
+  'Expo Out':    'expoOut',
+  'Expo In-Out': 'expoInOut',
+  'Circ In':     'circIn',
+  'Circ Out':    'circOut',
+  'Circ In-Out': 'circInOut',
+};
+
+// ── Noise Params ──────────────────────────────────────────────
 export const noiseParams = {
-  symmetry:    'standard',  // standard, 2way, 4way, mirror
-  branchAhead: 1.0,         // look-ahead factor for flow-field sampling
-  branchAngle: 0,           // extra angle offset in degrees
-  freqComp:    'none',      // frequency composition mode
-  freeMode:    false,       // ignore tile-center radial when true
-  freqLayers:  3,           // noise octaves (1–8)
-  freqAmply:   0.5,         // per-layer amplitude (0–1)
+  symmetry:     'standard',  // standard | mirrored
+  branchAmount: 1.0,         // 0–12
+  branchAngle:  0,           // radians
+  freqEasing:   'none',      // same 15-option set as scalingEase
+  freqMode:     'cos',       // cos | sin
+  freqLayers:   4,
+  freqBase:     0.07,
+  freqAmplify:  0.5,
 };
 
 export const noiseSymmetryOptions = {
   'Standard': 'standard',
-  '2-Way':    '2way',
-  '4-Way':    '4way',
-  'Mirror':   'mirror',
+  'Mirrored': 'mirrored',
 };
 
-export const freqCompOptions = {
-  'None':     'none',
-  'Add':      'add',
-  'Subtract': 'subtract',
-  'Multiply': 'multiply',
+export const freqModeOptions = {
+  'Cos': 'cos',
+  'Sin': 'sin',
 };
 
 // ── Swirl ─────────────────────────────────────────────────────
 export const swirl = {
-  swirlStart:  0,       // distance from tile edge where swirl begins (0–1)
-  swirlMode:   'none',  // none, rotary, wave
-  applyEffect: false,
-  frequency:   1.0,     // swirl cycles per tile radius
+  baseSwirl:     0,
+  swirlMode:     'none',   // none | rotary | wave
+  amplifyEffect: 0,
+  frequency:     1.0,
 };
 
 export const swirlModeOptions = {
-  'None':   'none',
-  'Rotary': 'rotary',
-  'Wave':   'wave',
+  'None':          'none',
+  'Rotary Effect': 'rotary',
+  'Wave Effect':   'wave',
 };
 
 // ── Mask ──────────────────────────────────────────────────────
 export const mask = {
-  maskTool: 'none',  // none, image
-  image:    null,    // p5.Image when loaded
-  invert:   false,
+  maskType:      'none',       // none | parametric | raster
+  branchMode:    'ignore',     // ignore | apply
+  addBranches:   6,
+  roundBranches: 0,
+  maskMargins:   { min: 0.1, max: 0.9 },
+  image:         null,         // p5.Image for raster mode
 };
 
-export const maskToolOptions = {
-  'None':  'none',
-  'Image': 'image',
+export const maskTypeOptions = {
+  'None':          'none',
+  'Parametric':    'parametric',
+  'Raster Image':  'raster',
+};
+
+export const maskBranchModeOptions = {
+  'Ignore': 'ignore',
+  'Apply':  'apply',
 };
 
 // ── Motion ────────────────────────────────────────────────────
 export const motion = {
-  motionType:   'none',   // none, noise, rotate
-  opacityLevel: 1.0,
-  speed:        1.0,
-  playing:      false,
+  motionType:   'none',   // none | noiseLoop | scalingLoop | scalingOneWay
+  amplifyLevel: 20,       // 0–100
 };
 
 export const motionTypeOptions = {
-  'None':        'none',
-  'Noise Driven':'noise',
-  'Rotate':      'rotate',
+  'None':             'none',
+  'Noise Loop':       'noiseLoop',
+  'Scaling Loop':     'scalingLoop',
+  'Scaling One Way':  'scalingOneWay',
 };
 
 // ── Random section flags ──────────────────────────────────────
 export const random = {
-  canvas:        false,
-  style:         false,
-  pattern:       false,
-  shape:         false,
-  noiseItems:    false,
-  noiseBranches: false,
-  noiseFreq:     false,
-  shapeEffect:   false,
-  swirlEffect:   false,
+  canvas:      false,
+  style:       false,
+  pattern:     false,
+  shape:       false,
+  noiseSeed:   false,
+  noiseBranch: false,
+  noiseEase:   false,
+  noiseFreq:   false,
+  swirlEffect: false,
+  maskEffect:  false,
 };
 
 // ── Custom SVG shape ──────────────────────────────────────────
@@ -165,7 +214,7 @@ export const customShape = {
 
 // ── Export ────────────────────────────────────────────────────
 export const exportSettings = {
-  format: 'png',   // png, svg, sequence, webm
+  format: 'png',
   scale:  1,
   status: 'Ready',
 };
@@ -196,19 +245,33 @@ export function applyState(target, source) {
   }
 }
 
-// ── Easing functions (distance from tile center, t = 0..1) ───
+// ── Easing functions ──────────────────────────────────────────
 export const easings = {
-  none:      ()  => 1,
-  linear:    (t) => t,
-  easeIn:    (t) => t * t,
-  easeOut:   (t) => 1 - (1 - t) * (1 - t),
-  easeInOut: (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
-  step:      (t) => t > 0.5 ? 1 : 0,
+  none:       ()  => 1,
+  linear:     (t) => t,
+  sineIn:     (t) => 1 - Math.cos(t * Math.PI / 2),
+  sineOut:    (t) => Math.sin(t * Math.PI / 2),
+  quadIn:     (t) => t * t,
+  quadOut:    (t) => 1 - (1 - t) * (1 - t),
+  quadInOut:  (t) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
+  cubicIn:    (t) => t * t * t,
+  cubicOut:   (t) => 1 - Math.pow(1 - t, 3),
+  cubicInOut: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  expoIn:     (t) => t === 0 ? 0 : Math.pow(2, 10 * t - 10),
+  expoOut:    (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t),
+  expoInOut:  (t) => t === 0 ? 0 : t === 1 ? 1 : t < 0.5
+    ? Math.pow(2, 20 * t - 10) / 2
+    : (2 - Math.pow(2, -20 * t + 10)) / 2,
+  circIn:     (t) => 1 - Math.sqrt(1 - t * t),
+  circOut:    (t) => Math.sqrt(1 - Math.pow(t - 1, 2)),
+  circInOut:  (t) => t < 0.5
+    ? (1 - Math.sqrt(1 - 4 * t * t)) / 2
+    : (Math.sqrt(1 - Math.pow(-2 * t + 2, 2)) + 1) / 2,
 };
 
 /** Apply selected easing to a 0–1 value. */
 export function applyEasing(t, mode) {
-  const fn = easings[mode] || easings.linear;
+  const fn = easings[mode] || easings.none;
   return fn(Math.max(0, Math.min(1, t)));
 }
 

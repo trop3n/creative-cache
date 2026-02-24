@@ -4,7 +4,7 @@
 
 import p5 from 'p5';
 import {
-  canvas, pattern, style, motion, customShape, mask,
+  canvas, shape, motion, customShape, mask,
   computeCanvasSize,
 } from './state.js';
 import { renderPattern } from './grid.js';
@@ -14,10 +14,10 @@ import { exportComposition } from './export.js';
 import { importState } from './presets.js';
 
 export async function loadFlakeTool(canvasContainer, paneContainer) {
-  let p5Instance  = null;
-  let uiInstance  = null;
-  let frameCount  = 0;
-  let isSetup     = false;
+  let p5Instance = null;
+  let uiInstance = null;
+  let frameCount = 0;
+  let isSetup    = false;
 
   const sketch = (p) => {
     p.setup = () => {
@@ -35,15 +35,15 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
           p.redraw();
         },
         onAnimationChange: () => {
-          if (motion.playing && motion.motionType !== 'none') {
+          if (motion.motionType !== 'none') {
             p.loop();
           } else {
             p.noLoop();
             p.redraw();
           }
         },
-        onExport:          () => exportComposition(p, frameCount),
-        onMaskUpload:      () => {
+        onExport:     () => exportComposition(p, frameCount),
+        onMaskUpload: () => {
           const input = document.getElementById('fileInput');
           if (input) {
             input.setAttribute('accept', 'image/*');
@@ -52,7 +52,6 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
         },
       });
 
-      // Drag-and-drop on canvas area (file-input clicks are handled globally)
       setupDragDrop(p);
 
       p.noLoop();
@@ -65,8 +64,8 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
       const time = (frameCount % 600) / 600;
       renderPattern(p, time);
 
-      if (motion.playing && motion.motionType !== 'none') {
-        frameCount += motion.speed;
+      if (motion.motionType !== 'none') {
+        frameCount++;
       }
     };
 
@@ -81,12 +80,12 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
   function syncCanvasSize() {
     const sidebarW = 280;
     const paneW    = 320;
-    const availW   = (window.innerWidth  - sidebarW - paneW) * 0.97;
-    const availH   = window.innerHeight * 0.97;
+    const availW   = (window.innerWidth  - sidebarW - paneW) * canvas.scale;
+    const availH   = window.innerHeight * canvas.scale;
     computeCanvasSize(availW, availH);
   }
 
-  // ── Drag-and-drop (canvas only — no duplicate fileInput listener) ──
+  // ── Drag-and-drop (canvas only) ─────────────────────────────
   function setupDragDrop(p) {
     canvasContainer.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -122,8 +121,7 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
         customShape.bounds  = data.bounds;
         customShape.name    = file.name;
         customShape.svgData = data;
-        // Automatically switch to custom shape
-        style.shapeType = 'custom';
+        shape.shapeType     = 'custom';
         refreshUI();
         p.redraw();
         setStatus('SVG loaded!');
@@ -131,9 +129,9 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
 
       } else if (type.startsWith('image/')) {
         setStatus('Loading mask…');
-        const img       = await loadP5Image(p, file);
-        mask.image      = img;
-        mask.maskTool   = 'image';
+        const img      = await loadP5Image(p, file);
+        mask.image     = img;
+        mask.maskType  = 'raster';
         refreshUI();
         p.redraw();
         setStatus('Mask loaded!');
@@ -162,7 +160,7 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
       const url = URL.createObjectURL(file);
       p.loadImage(url,
         (img) => { URL.revokeObjectURL(url); resolve(img); },
-        ()    => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); }
+        ()    => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); },
       );
     });
   }
@@ -173,9 +171,6 @@ export async function loadFlakeTool(canvasContainer, paneContainer) {
   return {
     p5Instance,
     uiInstance,
-    handleFile: (file) => {
-      // Called by src/main.js when a file is chosen via the global file input
-      processFile(p5Instance, file);
-    },
+    handleFile: (file) => processFile(p5Instance, file),
   };
 }

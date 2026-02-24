@@ -93,9 +93,16 @@ function loadVideo(file, onLoaded) {
   video.style.display = 'none';
   document.body.appendChild(video);
 
-  video.addEventListener('loadeddata', () => {
-    video.play();
+  // Trigger onLoaded from 'playing', not 'loadeddata'.
+  // Hardware-accelerated decoders often report loadeddata before the first
+  // frame is actually available to drawImage, producing a permanently black
+  // canvas. 'playing' guarantees the browser has rendered at least one frame.
+  video.addEventListener('playing', () => {
     onLoaded('video', video);
+  }, { once: true });
+
+  video.addEventListener('loadeddata', () => {
+    video.play().catch(e => console.warn('Video autoplay failed:', e));
   }, { once: true });
 
   video.addEventListener('error', () => {

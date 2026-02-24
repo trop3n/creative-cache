@@ -5,26 +5,31 @@
 /**
  * Get fill color for a cell.
  * @param {number} dist   normalised distance from tile centre (0–1)
- * @param {number} index  cell index (for palette cycling)
- * @param {Object} st     style state object
+ * @param {number} index  cell index (for palette cycling, currently unused)
+ * @param {Object} st     style state object (uses st.colorType and st.colors)
  * @returns {string} hex color
  */
 export function getFillColor(dist, index, st) {
-  const { colors, fillMapping } = st;
+  const { colors, colorType } = st;
   if (!colors || colors.length === 0) return '#ffffff';
 
-  // fillMapping 0 → solid first color; 1–4 → gradient across N colors
-  if (fillMapping <= 0) return colors[0];
+  switch (colorType) {
+    case 'solidColor':
+      return colors[0];
 
-  const numColors = Math.min(Math.round(fillMapping) + 1, colors.length);
+    case 'paletteSequence': {
+      const i = Math.min(Math.floor(dist * colors.length), colors.length - 1);
+      return colors[i];
+    }
 
-  if (numColors === 1) return colors[0];
-
-  const t = dist * (numColors - 1);
-  const i = Math.min(Math.floor(t), numColors - 2);
-  const frac = t - i;
-
-  return interpolateHex(colors[i], colors[Math.min(i + 1, colors.length - 1)], frac);
+    case 'paletteTransition':
+    default: {
+      const t = dist * (colors.length - 1);
+      const i = Math.min(Math.floor(t), colors.length - 2);
+      const frac = t - i;
+      return interpolateHex(colors[i], colors[Math.min(i + 1, colors.length - 1)], frac);
+    }
+  }
 }
 
 function interpolateHex(a, b, t) {

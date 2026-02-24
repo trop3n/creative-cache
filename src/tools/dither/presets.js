@@ -8,9 +8,9 @@ import { dither, gradient, ascii, cnv, cloneState, applyState } from './state.js
 // Only fields that differ from defaults need to be specified.
 const presetData = {
   'ASCII8 Digital Future': {
-    cnv: { ratio: '1:1', scale: 0.95 },
+    cnv: { ratio: '1:1', scale: 0.95, backColor: '#828282' },
     dither: { type: 'ascii', step: 4, contrast: 1.2, brightness: 1.05, scale: 2 },
-    ascii: { fontname: 'Press Start 2P', text: '.+0#%@$&!*', scale: 8, color: { limit: 2, mode: 'chars', char: '#ffffff', bg: '#555555' } },
+    ascii: { fontname: 'Press Start 2P', text: '.+0#%@$&!*', scale: 8, color: { limit: 2, mode: 'chars', char: '#ffffff', bg: '#828282' } },
     gradient: { type: 'original', saturation: 0.75, palette: 27 },
   },
   'ASCII8 Blocky Grain': {

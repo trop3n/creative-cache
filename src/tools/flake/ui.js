@@ -4,24 +4,40 @@
 
 import { Pane } from 'tweakpane';
 import {
-  canvas, pattern, style, noiseParams, swirl, mask, motion, exportSettings, presetState,
-  ratioOptions, shapeTypeOptions, scalingEaseOptions, blendModeOptions,
-  noiseSymmetryOptions, freqCompOptions, swirlModeOptions, maskToolOptions, motionTypeOptions,
+  canvas, pattern, style, shape, noiseParams, swirl, mask, motion,
+  exportSettings, presetState,
+  ratioOptions, renderStyleOptions, colorTypeOptions, blendModeOptions,
+  shapeTypeOptions, scalingEaseOptions,
+  noiseSymmetryOptions, freqModeOptions,
+  swirlModeOptions,
+  maskTypeOptions, maskBranchModeOptions,
+  motionTypeOptions,
 } from './state.js';
 import { getPresetNames, loadPreset, saveUserPreset, exportCurrentState, importState } from './presets.js';
 
-let pane = null;
+let pane      = null;
 let callbacks = {};
 
-// Folder references for visibility control
-let maskUploadBtn = null;
-let motionSpeedBlade = null;
-let motionPlayBlade = null;
+// Module-level color proxies (must stay in sync with style.colors on refresh)
+const colorProxies = [
+  { value: '#ffffff' },
+  { value: '#ffffff' },
+  { value: '#ffffff' },
+  { value: '#ffffff' },
+];
+
+// Module-level preset proxy
+const presetProxy = { value: '** Default **' };
+
+// Blades that need conditional visibility
+let maskParametricFolder = null;
+let maskRasterBtn        = null;
+let motionAmplifyBlade   = null;
 
 // ── Public API ────────────────────────────────────────────────
 
 /**
- * @param {HTMLElement} container  The pane-wrapper element
+ * @param {HTMLElement} container  Pane wrapper element
  * @param {Object}      cbs        Callback functions
  */
 export function setupUI(container, cbs) {
@@ -32,8 +48,9 @@ export function setupUI(container, cbs) {
 
   buildPresetSection();
   buildCanvasSection();
-  buildPatternSection();
   buildStyleSection();
+  buildPatternSection();
+  buildShapeSection();
   buildNoiseSection();
   buildSwirlSection();
   buildMaskSection();
@@ -41,17 +58,17 @@ export function setupUI(container, cbs) {
   buildRandomSection();
   buildExportSection();
 
-  pane.addButton({ title: 'Randomize Parameters' }).on('click', () => {
-    randomizeAll();
-    pane.refresh();
-    callbacks.onGridChange?.();
-  });
-
   return { dispose: () => { if (pane) { pane.dispose(); pane = null; } } };
 }
 
 export function refreshUI() {
-  if (pane) pane.refresh();
+  if (!pane) return;
+  // Sync color proxies from state before refresh
+  for (let i = 0; i < 4; i++) {
+    colorProxies[i].value = style.colors[i] || '#ffffff';
+  }
+  presetProxy.value = presetState.current;
+  pane.refresh();
 }
 
 export function setStatus(msg) {
@@ -62,24 +79,23 @@ export function setStatus(msg) {
 // ── Sections ──────────────────────────────────────────────────
 
 function buildPresetSection() {
-  const presetFolder = pane.addFolder({ title: 'PRESETS', expanded: true });
+  const f = pane.addFolder({ title: 'PRESETS', expanded: true });
 
-  const presetNames = getPresetNames();
-  const presetOpts  = Object.fromEntries(presetNames.map(n => [n, n]));
-  const proxy       = { value: presetState.current };
+  const names    = getPresetNames();
+  const opts     = Object.fromEntries(names.map(n => [n, n]));
+  presetProxy.value = presetState.current;
 
-  presetFolder.addBinding(proxy, 'value', {
-    label:   'Preset List',
-    options: presetOpts,
+  f.addBinding(presetProxy, 'value', {
+    label: 'Preset List', options: opts,
   }).on('change', (ev) => {
     presetState.current = ev.value;
     if (loadPreset(ev.value)) {
-      pane.refresh();
+      refreshUI();
       callbacks.onGridChange?.();
     }
   });
 
-  presetFolder.addButton({ title: 'Save as User Preset' }).on('click', () => {
+  f.addButton({ title: 'Save as User Preset' }).on('click', () => {
     const name = prompt('Preset name:');
     if (name?.trim()) {
       saveUserPreset(name.trim());
@@ -87,7 +103,7 @@ function buildPresetSection() {
     }
   });
 
-  const ioFolder = presetFolder.addFolder({ title: 'Import / Export', expanded: false });
+  const ioFolder = f.addFolder({ title: 'Import / Export', expanded: false });
 
   ioFolder.addButton({ title: 'Export JSON' }).on('click', () => {
     const blob = new Blob([exportCurrentState()], { type: 'application/json' });
@@ -106,10 +122,10 @@ function buildPresetSection() {
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader    = new FileReader();
-      reader.onload   = (ev) => {
+      const reader  = new FileReader();
+      reader.onload = (ev) => {
         if (importState(ev.target.result)) {
-          pane.refresh();
+          refreshUI();
           callbacks.onGridChange?.();
         }
       };
@@ -126,54 +142,34 @@ function buildCanvasSection() {
     label: 'Ratio', options: ratioOptions,
   }).on('change', () => callbacks.onGridChange?.());
 
+  f.addBinding(canvas, 'scale', {
+    label: 'Scale', min: 0.5, max: 1.0, step: 0.01,
+  }).on('change', () => callbacks.onGridChange?.());
+
   f.addBinding(canvas, 'background', {
     label: 'Background', view: 'color',
-  }).on('change', () => callbacks.onParamChange?.());
-}
-
-function buildPatternSection() {
-  const f = pane.addFolder({ title: 'PATTERN', expanded: true });
-
-  f.addBinding(pattern, 'cols', {
-    label: 'Pattern Cols', min: 2, max: 40, step: 1,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(pattern, 'cellSize', {
-    label: 'Cell Size', min: 8, max: 120, step: 2,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(pattern, 'cellOffset', {
-    label: 'Cell Offset', min: 0, max: 2, step: 0.05,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(pattern, 'seedFrom', {
-    label: 'Seed From', min: 0, max: 20, step: 1,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(pattern, 'seedNoise', {
-    label: 'Pattern Seed', min: 0, max: 100, step: 1,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(pattern, 'cellDivider', {
-    label: 'Cell Divider',
   }).on('change', () => callbacks.onParamChange?.());
 }
 
 function buildStyleSection() {
   const f = pane.addFolder({ title: 'STYLE', expanded: true });
 
-  f.addBinding(style, 'shapeType', {
-    label: 'Shape Type', options: shapeTypeOptions,
+  f.addBinding(style, 'renderStyle', {
+    label: 'Render Style', options: renderStyleOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(style, 'fillMapping', {
-    label: 'Fill Mapping', min: 0, max: 4, step: 1,
+  f.addBinding(style, 'blendMode', {
+    label: 'Blend Mode', options: blendModeOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  // Up to 4 color stops
+  f.addBinding(style, 'colorType', {
+    label: 'Color Type', options: colorTypeOptions,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  // Color pickers (use module-level proxies for reliable refresh)
   for (let i = 0; i < 4; i++) {
-    const proxy = { value: style.colors[i] || '#ffffff' };
-    f.addBinding(proxy, 'value', {
+    colorProxies[i].value = style.colors[i] || '#ffffff';
+    f.addBinding(colorProxies[i], 'value', {
       label: `Color ${i + 1}`, view: 'color',
     }).on('change', (ev) => {
       style.colors[i] = ev.value;
@@ -181,32 +177,88 @@ function buildStyleSection() {
     });
   }
 
-  f.addBinding(style, 'shapeScale', {
+  f.addButton({ title: 'Random Palette' }).on('click', () => {
+    const hue = rand(0, 360);
+    style.colors = [0, 80, 160, 220].map(
+      offset => hslToHex((hue + offset) % 360, rand(50, 90), rand(35, 65)),
+    );
+    refreshUI();
+    callbacks.onParamChange?.();
+  });
+
+  f.addButton({ title: 'Shuffle Colors' }).on('click', () => {
+    for (let i = style.colors.length - 1; i > 0; i--) {
+      const j = randInt(i + 1);
+      [style.colors[i], style.colors[j]] = [style.colors[j], style.colors[i]];
+    }
+    refreshUI();
+    callbacks.onParamChange?.();
+  });
+}
+
+function buildPatternSection() {
+  const f = pane.addFolder({ title: 'PATTERN', expanded: true });
+
+  f.addBinding(pattern, 'cells', {
+    label: 'Cells',
+    x: { min: 1, max: 40, step: 1 },
+    y: { min: 1, max: 40, step: 1 },
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(pattern, 'cellOffset', {
+    label: 'Cell Offset',
+    x: { min: -2, max: 2, step: 0.05 },
+    y: { min: -2, max: 2, step: 0.05 },
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(pattern, 'seed', {
+    label: 'Seed', min: -20, max: 20, step: 1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(pattern, 'seedRandom', {
+    label: 'Seed Random', min: 0, max: 100, step: 1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(pattern, 'cellRotation', {
+    label: 'Cell Rotation', min: -180, max: 180, step: 1,
+  }).on('change', () => callbacks.onParamChange?.());
+}
+
+function buildShapeSection() {
+  const f = pane.addFolder({ title: 'SHAPE', expanded: true });
+
+  f.addBinding(shape, 'shapeType', {
+    label: 'Shape Type', options: shapeTypeOptions,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(shape, 'gridMapping', {
+    label: 'Grid Mapping',
+    x: { min: 0, max: 20, step: 0.5 },
+    y: { min: 0, max: 20, step: 0.5 },
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(shape, 'shapeCount', {
+    label: 'Shape Count', min: 100, max: 10000, step: 100,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(shape, 'shapeScale', {
     label: 'Shape Scale', min: 0.05, max: 2.0, step: 0.05,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(style, 'scalingEase', {
+  f.addBinding(shape, 'scalePower', {
+    label: 'Scale Power', min: 0, max: 5, step: 0.1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(shape, 'scalingEase', {
     label: 'Scaling Ease', options: scalingEaseOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(style, 'baseRotation', {
+  f.addBinding(shape, 'baseRotation', {
     label: 'Base Rotation', min: -180, max: 180, step: 1,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(style, 'angleMult', {
+  f.addBinding(shape, 'angleMult', {
     label: 'Angle Multiplier', min: -20, max: 20, step: 0.5,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(style, 'strokeWidth', {
-    label: 'Stroke Width', min: 0, max: 6, step: 0.5,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(style, 'strokeColor', {
-    label: 'Stroke Color', view: 'color',
-  }).on('change', () => callbacks.onParamChange?.());
-
-  f.addBinding(style, 'blendMode', {
-    label: 'Blend Mode', options: blendModeOptions,
   }).on('change', () => callbacks.onParamChange?.());
 }
 
@@ -217,44 +269,48 @@ function buildNoiseSection() {
     label: 'Symmetry', options: noiseSymmetryOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(noiseParams, 'branchAhead', {
-    label: 'Branch Ahead', min: 0, max: 5, step: 0.05,
+  f.addBinding(noiseParams, 'branchAmount', {
+    label: 'Branch Amount', min: 0, max: 12, step: 0.1,
   }).on('change', () => callbacks.onParamChange?.());
 
   f.addBinding(noiseParams, 'branchAngle', {
-    label: 'Branch Angle', min: -180, max: 180, step: 1,
+    label: 'Branch Angle (rad)', min: -Math.PI * 2, max: Math.PI * 2, step: 0.05,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(noiseParams, 'freqComp', {
-    label: 'Freq Comp', options: freqCompOptions,
+  f.addBinding(noiseParams, 'freqEasing', {
+    label: 'Freq Easing', options: scalingEaseOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(noiseParams, 'freeMode', {
-    label: 'Free Mode',
+  f.addBinding(noiseParams, 'freqMode', {
+    label: 'Freq Mode', options: freqModeOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
   f.addBinding(noiseParams, 'freqLayers', {
-    label: 'Freq Layers', min: 1, max: 8, step: 1,
+    label: 'Freq Layers', min: 1, max: 12, step: 1,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(noiseParams, 'freqAmply', {
-    label: 'Freq Amply', min: 0, max: 1, step: 0.02,
+  f.addBinding(noiseParams, 'freqBase', {
+    label: 'Freq Base', min: 0.01, max: 1.0, step: 0.01,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(noiseParams, 'freqAmplify', {
+    label: 'Freq Amplify', min: 0, max: 1, step: 0.02,
   }).on('change', () => callbacks.onParamChange?.());
 }
 
 function buildSwirlSection() {
   const f = pane.addFolder({ title: 'SWIRL', expanded: false });
 
-  f.addBinding(swirl, 'applyEffect', {
-    label: 'Apply Effect',
-  }).on('change', () => callbacks.onParamChange?.());
-
   f.addBinding(swirl, 'swirlMode', {
     label: 'Swirl Mode', options: swirlModeOptions,
   }).on('change', () => callbacks.onParamChange?.());
 
-  f.addBinding(swirl, 'swirlStart', {
-    label: 'Swirl Start', min: 0, max: 1, step: 0.02,
+  f.addBinding(swirl, 'baseSwirl', {
+    label: 'Base Swirl', min: 0, max: 1, step: 0.02,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  f.addBinding(swirl, 'amplifyEffect', {
+    label: 'Amplify Effect', min: -2, max: 2, step: 0.05,
   }).on('change', () => callbacks.onParamChange?.());
 
   f.addBinding(swirl, 'frequency', {
@@ -265,19 +321,46 @@ function buildSwirlSection() {
 function buildMaskSection() {
   const f = pane.addFolder({ title: 'MASK', expanded: false });
 
-  f.addBinding(mask, 'maskTool', {
-    label: 'Mask Tool', options: maskToolOptions,
+  f.addBinding(mask, 'maskType', {
+    label: 'Mask Type', options: maskTypeOptions,
   }).on('change', (ev) => {
-    if (maskUploadBtn) maskUploadBtn.hidden = (ev.value !== 'image');
+    updateMaskVisibility(ev.value);
     callbacks.onParamChange?.();
   });
 
-  maskUploadBtn = f.addButton({ title: 'Upload Mask Image' });
-  maskUploadBtn.on('click', () => callbacks.onMaskUpload?.());
-  maskUploadBtn.hidden = (mask.maskTool !== 'image');
+  // Parametric controls (hidden unless maskType === 'parametric')
+  maskParametricFolder = f.addFolder({ title: 'Parametric Settings', expanded: true });
 
-  f.addBinding(mask, 'invert', { label: 'Invert' })
-    .on('change', () => callbacks.onParamChange?.());
+  maskParametricFolder.addBinding(mask, 'branchMode', {
+    label: 'Branch Mode', options: maskBranchModeOptions,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  maskParametricFolder.addBinding(mask, 'addBranches', {
+    label: 'Branches', min: 1, max: 12, step: 1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  maskParametricFolder.addBinding(mask, 'roundBranches', {
+    label: 'Roundness', min: 0, max: 5, step: 0.1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  maskParametricFolder.addBinding(mask.maskMargins, 'min', {
+    label: 'Inner Margin', min: 0, max: 1, step: 0.01,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  maskParametricFolder.addBinding(mask.maskMargins, 'max', {
+    label: 'Outer Margin', min: 0, max: 1, step: 0.01,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  // Raster upload button (hidden unless maskType === 'raster')
+  maskRasterBtn = f.addButton({ title: 'Upload Mask Image' });
+  maskRasterBtn.on('click', () => callbacks.onMaskUpload?.());
+
+  updateMaskVisibility(mask.maskType);
+}
+
+function updateMaskVisibility(maskType) {
+  if (maskParametricFolder) maskParametricFolder.hidden = (maskType !== 'parametric');
+  if (maskRasterBtn)        maskRasterBtn.hidden        = (maskType !== 'raster');
 }
 
 function buildMotionSection() {
@@ -287,53 +370,53 @@ function buildMotionSection() {
     label: 'Motion Type', options: motionTypeOptions,
   }).on('change', (ev) => {
     const active = ev.value !== 'none';
-    if (motionSpeedBlade) motionSpeedBlade.hidden = !active;
-    if (motionPlayBlade)  motionPlayBlade.hidden  = !active;
+    if (motionAmplifyBlade) motionAmplifyBlade.hidden = !active;
     callbacks.onAnimationChange?.();
   });
 
-  f.addBinding(motion, 'opacityLevel', {
-    label: 'Opacity Level', min: 0, max: 1, step: 0.02,
-  }).on('change', () => callbacks.onParamChange?.());
-
-  motionSpeedBlade = f.addBinding(motion, 'speed', {
-    label: 'Speed', min: 0.1, max: 5, step: 0.1,
+  motionAmplifyBlade = f.addBinding(motion, 'amplifyLevel', {
+    label: 'Amplify Level', min: 0, max: 100, step: 1,
   });
-  motionSpeedBlade.on('change', () => callbacks.onParamChange?.());
-
-  motionPlayBlade = f.addBinding(motion, 'playing', { label: 'Playing' });
-  motionPlayBlade.on('change', () => callbacks.onAnimationChange?.());
-
-  const active = motion.motionType !== 'none';
-  motionSpeedBlade.hidden = !active;
-  motionPlayBlade.hidden  = !active;
+  motionAmplifyBlade.on('change', () => callbacks.onParamChange?.());
+  motionAmplifyBlade.hidden = (motion.motionType === 'none');
 }
 
 function buildRandomSection() {
   const f = pane.addFolder({ title: 'RANDOM', expanded: false });
 
   const sections = [
-    ['Canvas Noise',    'canvas'],
-    ['Style Items',     'style'],
-    ['Pattern Items',   'pattern'],
-    ['Noise Items',     'noiseItems'],
-    ['Shape Effect',    'shapeEffect'],
-    ['Swirl Effect',    'swirlEffect'],
+    ['Canvas',   'canvas'],
+    ['Style',    'style'],
+    ['Pattern',  'pattern'],
+    ['Shape',    'shape'],
+    ['Swirl',    'swirl'],
+    ['Mask',     'mask'],
   ];
 
   for (const [label, key] of sections) {
-    f.addButton({ title: label + ': Randomize' }).on('click', () => {
+    f.addButton({ title: `${label}: Randomize` }).on('click', () => {
       randomizeSection(key);
-      pane.refresh();
+      refreshUI();
       callbacks.onParamChange?.();
     });
   }
 
-  f.addButton({ title: 'Noise Branches: Separate All' }).on('click', () => {
-    randomizeSection('noiseBranches');
-    pane.refresh();
-    callbacks.onParamChange?.();
-  });
+  const noiseFolder = f.addFolder({ title: 'Noise Randomize', expanded: false });
+
+  const noiseSubs = [
+    ['Seed',   'noiseSeed'],
+    ['Branch', 'noiseBranch'],
+    ['Ease',   'noiseEase'],
+    ['Freq',   'noiseFreq'],
+  ];
+
+  for (const [label, key] of noiseSubs) {
+    noiseFolder.addButton({ title: `${label}: Randomize` }).on('click', () => {
+      randomizeSection(key);
+      refreshUI();
+      callbacks.onParamChange?.();
+    });
+  }
 }
 
 function buildExportSection() {
@@ -341,7 +424,7 @@ function buildExportSection() {
 
   f.addBinding(exportSettings, 'format', {
     label: 'Format',
-    options: { 'PNG': 'png', 'SVG': 'svg', 'PNG Sequence': 'sequence', 'WebM': 'webm' },
+    options: { PNG: 'png', 'PNG Sequence': 'sequence', WebM: 'webm' },
   });
 
   f.addBinding(exportSettings, 'scale', {
@@ -353,16 +436,7 @@ function buildExportSection() {
   f.addButton({ title: 'Export' }).on('click', () => callbacks.onExport?.());
 }
 
-// ── Randomization helpers ─────────────────────────────────────
-
-function randomizeAll() {
-  randomizeSection('canvas');
-  randomizeSection('style');
-  randomizeSection('pattern');
-  randomizeSection('noiseItems');
-  randomizeSection('noiseBranches');
-  randomizeSection('swirlEffect');
-}
+// ── Randomization ─────────────────────────────────────────────
 
 function randomizeSection(key) {
   switch (key) {
@@ -371,53 +445,82 @@ function randomizeSection(key) {
       break;
 
     case 'style': {
-      const types = Object.values(shapeTypeOptions).filter(t => t !== 'custom');
-      style.shapeType   = types[randInt(types.length)];
-      style.shapeScale  = rand(0.3, 1.2);
-      style.baseRotation = randInt(360) - 180;
-      style.angleMult   = rand(-12, 12);
-      style.fillMapping = randInt(5);
+      const types = Object.values(renderStyleOptions);
+      style.renderStyle = types[randInt(types.length)];
+      const colorTypes  = Object.values(colorTypeOptions);
+      style.colorType   = colorTypes[randInt(colorTypes.length)];
       const hue = rand(0, 360);
-      style.colors = [0, 80, 160, 220].map(offset => hslToHex((hue + offset) % 360, rand(50, 90), rand(35, 65)));
+      style.colors = [0, 80, 160, 220].map(
+        offset => hslToHex((hue + offset) % 360, rand(50, 90), rand(35, 65)),
+      );
       break;
     }
 
     case 'pattern':
-      pattern.cols      = randInt(20) + 4;
-      pattern.cellSize  = (randInt(8) + 2) * 8;
-      pattern.cellOffset = rand(0, 1);
-      pattern.seedNoise = randInt(100);
+      pattern.cells.x     = randInt(30) + 4;
+      pattern.cells.y     = randInt(30) + 4;
+      pattern.cellOffset.x = rand(-1, 1);
+      pattern.cellOffset.y = rand(-1, 1);
+      pattern.seed        = randInt(41) - 20;
+      pattern.seedRandom  = randInt(100);
       break;
 
-    case 'noiseItems':
-      noiseParams.freqLayers = randInt(7) + 1;
-      noiseParams.freqAmply  = rand(0.2, 0.9);
-      noiseParams.symmetry   = ['standard', '2way', '4way', 'mirror'][randInt(4)];
+    case 'shape': {
+      const types = Object.values(shapeTypeOptions).filter(t => t !== 'custom');
+      shape.shapeType   = types[randInt(types.length)];
+      shape.shapeScale  = rand(0.3, 1.2);
+      shape.baseRotation = randInt(360) - 180;
+      shape.angleMult   = rand(-12, 12);
+      shape.gridMapping.x = rand(1, 15);
+      shape.gridMapping.y = rand(1, 15);
+      break;
+    }
+
+    case 'swirl':
+      swirl.swirlMode     = Object.values(swirlModeOptions)[randInt(3)];
+      swirl.frequency     = rand(0.5, 5);
+      swirl.baseSwirl     = rand(0, 0.5);
+      swirl.amplifyEffect = rand(-1, 1);
       break;
 
-    case 'noiseBranches':
-      noiseParams.branchAhead = rand(0, 3);
-      noiseParams.branchAngle = randInt(360) - 180;
+    case 'mask':
+      mask.addBranches   = randInt(10) + 2;
+      mask.roundBranches = rand(0, 3);
+      mask.maskMargins.min = rand(0, 0.2);
+      mask.maskMargins.max = rand(0.5, 1.0);
       break;
 
-    case 'shapeEffect':
-      style.scalingEase = Object.values(scalingEaseOptions)[randInt(Object.keys(scalingEaseOptions).length)];
+    case 'noiseSeed':
+      pattern.seed       = randInt(41) - 20;
+      pattern.seedRandom = randInt(100);
       break;
 
-    case 'swirlEffect':
-      swirl.applyEffect = Math.random() > 0.5;
-      swirl.swirlMode   = ['none', 'rotary', 'wave'][randInt(3)];
-      swirl.frequency   = rand(0.5, 5);
-      swirl.swirlStart  = rand(0, 0.5);
+    case 'noiseBranch':
+      noiseParams.branchAmount = rand(0, 12);
+      noiseParams.branchAngle  = rand(-Math.PI, Math.PI);
+      break;
+
+    case 'noiseEase': {
+      const eases = Object.values(scalingEaseOptions);
+      noiseParams.freqEasing  = eases[randInt(eases.length)];
+      shape.scalingEase       = eases[randInt(eases.length)];
+      break;
+    }
+
+    case 'noiseFreq':
+      noiseParams.freqLayers  = randInt(10) + 1;
+      noiseParams.freqAmplify = rand(0.2, 0.9);
+      noiseParams.freqBase    = rand(0.02, 0.5);
+      noiseParams.freqMode    = Math.random() > 0.5 ? 'cos' : 'sin';
       break;
   }
 }
 
 // ── Color utilities ───────────────────────────────────────────
 
-function rand(min, max) { return min + Math.random() * (max - min); }
-function randInt(n)     { return Math.floor(Math.random() * n); }
-function randomHex()    { return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'); }
+function rand(min, max)  { return min + Math.random() * (max - min); }
+function randInt(n)      { return Math.floor(Math.random() * n); }
+function randomHex()     { return '#' + Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0'); }
 
 function hslToHex(h, s, l) {
   l /= 100;
