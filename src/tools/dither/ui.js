@@ -4,7 +4,7 @@
 
 import { Pane } from 'tweakpane';
 import {
-  cnv, dither, gradient, ascii, rec,
+  cnv, dither, gradient, ascii, rec, obj3d,
   ditherTypeOptions, matrixOptions, noiseOptions,
   ratioOptions, fontTypes, asciiColorModes,
 } from './state.js';
@@ -176,6 +176,84 @@ export function setupUI(container, p, cbs) {
     label: 'Back Color',
     view: 'color',
   }).on('change', () => callbacks.onParamChange?.());
+
+  // --- OBJECT Folder ---
+  const objectFolder = pane.addFolder({ title: 'OBJECT', expanded: false });
+
+  objectFolder.addBinding(obj3d, 'cameraType', {
+    label: 'Camera Type',
+    options: { 'Perspective': 'perspective', 'Orthographic': 'ortho' },
+  }).on('change', () => callbacks.onParamChange?.());
+
+  const objTab = objectFolder.addTab({
+    pages: [{ title: 'Controls / Motions' }, { title: 'Lights' }],
+  });
+
+  const motionsPage = objTab.pages[0];
+
+  motionsPage.addBinding(obj3d, 'rotateType', {
+    label: 'Rotate Type',
+    options: { 'Constant': 'constant', 'Oscillate': 'oscillate', 'None': 'none' },
+  }).on('change', () => callbacks.onParamChange?.());
+
+  motionsPage.addBinding(obj3d.rotateSpeed, 'x', { label: 'Rot Speed X', min: -5, max: 5, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.rotateSpeed, 'y', { label: 'Rot Speed Y', min: -5, max: 5, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.rotateSpeed, 'z', { label: 'Rot Speed Z', min: -5, max: 5, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+
+  motionsPage.addBinding(obj3d.translateLevel, 'x', { label: 'Trans Level X', min: -1, max: 1, step: 0.01 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.translateLevel, 'y', { label: 'Trans Level Y', min: -1, max: 1, step: 0.01 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.translateLevel, 'z', { label: 'Trans Level Z', min: -1, max: 1, step: 0.01 })
+    .on('change', () => callbacks.onParamChange?.());
+
+  motionsPage.addBinding(obj3d.translateSpeed, 'x', { label: 'Trans Speed X', min: -2, max: 2, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.translateSpeed, 'y', { label: 'Trans Speed Y', min: -2, max: 2, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  motionsPage.addBinding(obj3d.translateSpeed, 'z', { label: 'Trans Speed Z', min: -2, max: 2, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+
+  motionsPage.addButton({ title: 'Reset Motions' }).on('click', () => {
+    obj3d.rotateSpeed.x = 0; obj3d.rotateSpeed.y = 0; obj3d.rotateSpeed.z = 0;
+    obj3d.translateLevel.x = 0; obj3d.translateLevel.y = 0; obj3d.translateLevel.z = 0;
+    obj3d.translateSpeed.x = 0; obj3d.translateSpeed.y = 0; obj3d.translateSpeed.z = 0;
+    if (pane) pane.refresh();
+  });
+
+  motionsPage.addBinding(obj3d, 'scale', {
+    label: 'Scale',
+    min: 0.1, max: 5, step: 0.05,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  motionsPage.addButton({ title: 'Reset Coordinates' }).on('click', () => {
+    obj3d.rotX = 0; obj3d.rotY = 0; obj3d.rotZ = 0;
+    obj3d.transX = 0; obj3d.transY = 0;
+    obj3d.scale = 1.0;
+    if (pane) pane.refresh();
+  });
+
+  const lightsPage = objTab.pages[1];
+
+  lightsPage.addBinding(obj3d.lights, 'ambient', {
+    label: 'Ambient',
+    min: 0, max: 255, step: 1,
+  }).on('change', () => callbacks.onParamChange?.());
+
+  lightsPage.addBinding(obj3d.lights, 'dirColor', {
+    label: 'Dir Color',
+    view: 'color',
+  }).on('change', () => callbacks.onParamChange?.());
+
+  lightsPage.addBinding(obj3d.lights, 'dirX', { label: 'Dir X', min: -1, max: 1, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  lightsPage.addBinding(obj3d.lights, 'dirY', { label: 'Dir Y', min: -1, max: 1, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
+  lightsPage.addBinding(obj3d.lights, 'dirZ', { label: 'Dir Z', min: -1, max: 1, step: 0.05 })
+    .on('change', () => callbacks.onParamChange?.());
 
   // --- DITHER Folder ---
   ditherFolder = pane.addFolder({ title: 'DITHER', expanded: true });

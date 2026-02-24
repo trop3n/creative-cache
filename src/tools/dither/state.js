@@ -134,10 +134,29 @@ export const rec = {
 
 // Media state (managed at runtime)
 export const media = {
-  type: null,       // 'image', 'video', or null
-  source: null,     // p5.Image or video element
+  type: null,       // 'image', 'video', 'obj', or null
+  source: null,     // p5.Image, video element, or p5.Geometry
   video: null,      // HTML video element if video
+  model: null,      // p5.Geometry if OBJ
   fileName: '',
+};
+
+// 3D object state (OBJ mode)
+export const obj3d = {
+  cameraType: 'perspective',   // 'perspective' | 'ortho'
+  rotateType: 'constant',      // 'constant' | 'oscillate' | 'none'
+  rotateSpeed: { x: 0, y: 0.5, z: 0 },
+  translateLevel: { x: 0, y: 0, z: 0 },
+  translateSpeed: { x: 0, y: 0, z: 0 },
+  // Accumulated live state (reset by UI buttons)
+  rotX: 0, rotY: 0, rotZ: 0,
+  transX: 0, transY: 0,
+  scale: 1.0,
+  lights: {
+    ambient: 50,
+    dirColor: '#ffffff',
+    dirX: 0.5, dirY: -1.0, dirZ: -1.0,
+  },
 };
 
 /**

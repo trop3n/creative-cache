@@ -467,41 +467,80 @@ export class EffectRenderer {
     }
   }
 
-  drawShape(p, x, y, scale) {
-    const s = scale * shape.size;
+  /**
+   * Draw the selected shape (circle / square / rectangle) sized to the blob's
+   * bounding box. Callers manage fill/stroke state before calling this.
+   */
+  drawShape(p, blob, scale = 1) {
+    const { x, y, bounds: b } = blob;
     switch (shape.type) {
-      case 'square':
+      case 'circle':
+        p.ellipse(x, y, b.w * scale, b.h * scale);
+        break;
+      case 'square': {
+        const s = Math.max(b.w, b.h) * scale;
         p.rectMode(p.CENTER);
         p.rect(x, y, s, s);
         break;
-      case 'circle':
-        p.ellipse(x, y, s, s);
-        break;
+      }
       case 'rectangle':
-        p.rectMode(p.CENTER);
-        p.rect(x, y, s * 1.5, s);
+        p.rectMode(p.CORNER);
+        p.rect(
+          b.x + (b.w * (1 - scale)) / 2,
+          b.y + (b.h * (1 - scale)) / 2,
+          b.w * scale,
+          b.h * scale
+        );
         break;
     }
   }
 
+  /** Small fixed-size centroid marker that follows the active shape type. */
+  drawCenterMarker(p, blob) {
+    const s = shape.size;
+    p.fill(shape.color);
+    p.noStroke();
+    switch (shape.type) {
+      case 'circle':
+        p.ellipse(blob.x, blob.y, s, s);
+        break;
+      case 'square':
+        p.rectMode(p.CENTER);
+        p.rect(blob.x, blob.y, s, s);
+        break;
+      case 'rectangle':
+        p.rectMode(p.CENTER);
+        p.rect(blob.x, blob.y, s * 1.5, s);
+        break;
+    }
+    p.noFill();
+    p.stroke(shape.color);
+    p.strokeWeight(shape.strokeWidth);
+  }
+
   drawBasicRegion(p, blob) {
-    this.drawShape(p, blob.x, blob.y, 1);
+    p.noFill();
+    this.drawShape(p, blob, 1);
   }
 
   drawLabelRegion(p, blob) {
-    this.drawShape(p, blob.x, blob.y, 1);
+    p.noFill();
+    this.drawShape(p, blob, 1);
     p.fill(shape.color);
     p.noStroke();
     p.textSize(region.labelSize);
     p.textAlign(p.CENTER, p.BOTTOM);
-    p.text(region.label, blob.x, blob.y - shape.size);
+    p.text(region.label, blob.x, blob.bounds.y - 2);
+    p.noFill();
+    p.stroke(shape.color);
+    p.strokeWeight(shape.strokeWidth);
   }
 
   drawFrameRegion(p, blob) {
     const b = blob.bounds;
     p.noFill();
     p.rect(b.x, b.y, b.w, b.h);
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   drawLFrameRegion(p, blob) {
@@ -526,7 +565,7 @@ export class EffectRenderer {
     p.line(b.x + b.w, b.y + b.h, b.x + b.w - cLen, b.y + b.h);
     p.line(b.x + b.w, b.y + b.h, b.x + b.w, b.y + b.h - cLen);
 
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   drawXFrameRegion(p, blob) {
@@ -534,7 +573,7 @@ export class EffectRenderer {
     p.noFill();
     p.line(b.x, b.y, b.x + b.w, b.y + b.h);
     p.line(b.x + b.w, b.y, b.x, b.y + b.h);
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   drawGridRegion(p, blob) {
@@ -548,7 +587,7 @@ export class EffectRenderer {
     for (let gy = b.y; gy < b.y + b.h; gy += spacing) {
       p.line(b.x, gy, b.x + b.w, gy);
     }
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   drawParticleRegion(p, blob) {
@@ -558,7 +597,7 @@ export class EffectRenderer {
     for (let i = 0; i < region.particleCount; i++) {
       p.ellipse(b.x + Math.random() * b.w, b.y + Math.random() * b.h, 3, 3);
     }
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   drawDashRegion(p, blob) {
@@ -574,7 +613,7 @@ export class EffectRenderer {
       const next = this.getPerimeterPoint(b, t + 0.5 / dashes);
       if (pos && next) p.line(pos.x, pos.y, next.x, next.y);
     }
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawCenterMarker(p, blob);
   }
 
   getPerimeterPoint(b, t) {
@@ -615,29 +654,34 @@ export class EffectRenderer {
   }
 
   drawLabel2Region(p, blob) {
-    this.drawShape(p, blob.x, blob.y, 1);
+    p.noFill();
+    this.drawShape(p, blob, 1);
+    const labelY = blob.bounds.y + blob.bounds.h + 2;
     p.fill('#000000aa');
     p.noStroke();
-    p.rect(blob.x - 24, blob.y + shape.size / 2, 48, 14);
+    p.rect(blob.x - 24, labelY, 48, 14);
     p.fill(shape.color);
     p.textSize(10);
     p.textAlign(p.CENTER, p.TOP);
-    p.text(`${Math.round(blob.x)},${Math.round(blob.y)}`, blob.x, blob.y + shape.size / 2 + 2);
+    p.text(`${Math.round(blob.x)},${Math.round(blob.y)}`, blob.x, labelY + 2);
+    p.noFill();
+    p.stroke(shape.color);
+    p.strokeWeight(shape.strokeWidth);
   }
 
   drawGlowRegion(p, blob) {
     const intensity = region.glowIntensity;
     p.noStroke();
     for (let i = 3; i >= 0; i--) {
-      // setAlpha expects 0-255
       const alpha = intensity * (1 - i / 4) * 255;
       const c = p.color(shape.color);
       c.setAlpha(alpha);
       p.fill(c);
-      this.drawShape(p, blob.x, blob.y, 1 + i * 0.5);
+      this.drawShape(p, blob, 1 + i * 0.3);
     }
     p.fill(shape.color);
-    this.drawShape(p, blob.x, blob.y, 0.5);
+    this.drawShape(p, blob, 0.5);
+    p.noFill();
   }
 
   dispose() {}

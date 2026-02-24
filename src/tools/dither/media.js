@@ -49,6 +49,8 @@ export function handleFile(p, file, onLoaded) {
     loadImage(p, file, onLoaded);
   } else if (type.startsWith('video/')) {
     loadVideo(file, onLoaded);
+  } else if (file.name.toLowerCase().endsWith('.obj')) {
+    loadObjFile(p, file, onLoaded);
   } else if (file.name.endsWith('.json')) {
     loadPresetFile(file);
   } else {
@@ -102,6 +104,20 @@ function loadVideo(file, onLoaded) {
   }, { once: true });
 
   video.load();
+}
+
+/**
+ * Load a Wavefront OBJ file into a p5 geometry model.
+ */
+function loadObjFile(p, file, onLoaded) {
+  const url = URL.createObjectURL(file);
+  p.loadModel(url, true, (model) => {
+    URL.revokeObjectURL(url);
+    onLoaded('obj', model);
+  }, () => {
+    URL.revokeObjectURL(url);
+    console.error('Failed to load OBJ model');
+  });
 }
 
 /**

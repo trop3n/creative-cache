@@ -16,7 +16,7 @@ export const tools = {
     id: 'dither',
     name: 'DITHR',
     description: 'Image dithering & effects',
-    accept: 'image/*,video/*',
+    accept: 'image/*,video/*,.obj',
     load: async (canvasContainer, paneContainer) => {
       const { loadDitherTool } = await import('./dither/index.js');
       return loadDitherTool(canvasContainer, paneContainer);

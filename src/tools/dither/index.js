@@ -6,7 +6,7 @@ import p5 from 'p5';
 import { dithVert, gradVert, dithFrag, halfFrag, cmykFrag, asciiFrag, gradFrag } from './shaders.js';
 import { matrixTypes, matrixToImage, generateNoiseTextures, createFlatTexture } from './matrices.js';
 import { getActiveColors } from './palettes.js';
-import { cnv, dither, gradient, ascii, media, rec, resolutions } from './state.js';
+import { cnv, dither, gradient, ascii, media, rec, resolutions, obj3d } from './state.js';
 import { setupUI, refreshUI } from './ui.js';
 import { setupMedia, handleFile as handleFileMedia } from './media.js';
 
@@ -24,6 +24,7 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
   let gImg = null;
   let dithBuffer = null;
   let gradBuffer = null;
+  let obj3dBuffer = null;
   let ditherShader = null;
   let halftoneShader = null;
   let cmykShader = null;
@@ -68,7 +69,17 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
       fileHandler = (type, source) => {
         media.type = type;
         media.source = source;
-        if (type === 'video') media.video = source;
+        if (type === 'video') {
+          media.video = source;
+        } else if (type === 'obj') {
+          media.model = source;
+          // Reset animation state when a new model is loaded
+          obj3d.rotX = 0; obj3d.rotY = 0; obj3d.rotZ = 0;
+          obj3d.transX = 0; obj3d.transY = 0;
+          createObj3dBuffer(p, cnv.width, cnv.height);
+          needsResize = true;
+          return; // Don't call resizeForMedia for OBJ — keep current canvas size
+        }
         resizeForMedia(p, source);
         needsResize = true;
       };
@@ -105,14 +116,23 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
           const oldGImg = gImg;
           gImg = p.createGraphics(cnv.width, cnv.height);
           gImg.pixelDensity(1);
-          if (media.source) gImg.image(media.source, 0, 0, cnv.width, cnv.height);
+          // Use p5 image() for p5.Image; raw drawImage for video/canvas elements
+          if (media.type === 'image' && media.source) {
+            gImg.image(media.source, 0, 0, cnv.width, cnv.height);
+          } else if (media.type === 'video' && media.video) {
+            gImg.drawingContext.drawImage(media.video, 0, 0, cnv.width, cnv.height);
+          }
           oldGImg.remove();
         }
         needsResize = false;
       }
 
       if (media.type === 'video' && media.video) {
-        gImg.image(media.video, 0, 0, gImg.width, gImg.height);
+        gImg.drawingContext.drawImage(media.video, 0, 0, gImg.width, gImg.height);
+      } else if (media.type === 'obj' && media.model && obj3dBuffer) {
+        renderObjScene(p);
+        // obj3dBuffer is WEBGL mode — access its canvas via the GL context
+        gImg.drawingContext.drawImage(obj3dBuffer.drawingContext.canvas, 0, 0, gImg.width, gImg.height);
       }
 
       p.background(cnv.backColor);
@@ -249,6 +269,16 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
     gradientShader = gradBuffer.createShader(gradVert, gradFrag);
 
     dithBuffer.textureWrap(p.REPEAT);
+
+    if (media.type === 'obj') {
+      createObj3dBuffer(p, w, h);
+    }
+  }
+
+  function createObj3dBuffer(p, w, h) {
+    if (obj3dBuffer) obj3dBuffer.remove();
+    obj3dBuffer = p.createGraphics(w, h, p.WEBGL);
+    obj3dBuffer.pixelDensity(1);
   }
 
   function createPlaceholder(p) {
@@ -276,25 +306,72 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
     media.source = img;
   }
 
-  function resizeForMedia(p, source) {
-    let srcW, srcH;
-    if (source && source.videoWidth) {
-      srcW = source.videoWidth || 640;
-      srcH = source.videoHeight || 480;
-    } else if (source && source.width) {
-      srcW = source.width;
-      srcH = source.height;
-    } else {
-      srcW = 640;
-      srcH = 480;
+  // ============================================================
+  // 3D Object Rendering
+  // ============================================================
+
+  function renderObjScene(p) {
+    const frame = p.frameCount;
+
+    // Advance rotation
+    if (obj3d.rotateType === 'constant') {
+      obj3d.rotX += p.radians(obj3d.rotateSpeed.x);
+      obj3d.rotY += p.radians(obj3d.rotateSpeed.y);
+      obj3d.rotZ += p.radians(obj3d.rotateSpeed.z);
+    } else if (obj3d.rotateType === 'oscillate') {
+      // Speed acts as frequency multiplier; accumulated angle oscillates
+      obj3d.rotX = Math.sin(frame * Math.max(0.001, Math.abs(obj3d.rotateSpeed.x)) * 0.02) * Math.PI;
+      obj3d.rotY = Math.sin(frame * Math.max(0.001, Math.abs(obj3d.rotateSpeed.y)) * 0.02) * Math.PI;
+      obj3d.rotZ = Math.sin(frame * Math.max(0.001, Math.abs(obj3d.rotateSpeed.z)) * 0.02) * Math.PI;
     }
 
+    // Compute oscillating translation (level = amplitude, speed = frequency)
+    const sceneW = cnv.width;
+    const sceneH = cnv.height;
+    const tx = Math.sin(frame * obj3d.translateSpeed.x * 0.02) * obj3d.translateLevel.x * sceneW * 0.5;
+    const ty = Math.sin(frame * obj3d.translateSpeed.y * 0.02) * obj3d.translateLevel.y * sceneH * 0.5;
+    const tz = Math.sin(frame * obj3d.translateSpeed.z * 0.02) * obj3d.translateLevel.z * Math.min(sceneW, sceneH) * 0.5;
+
+    obj3dBuffer.clear();
+    obj3dBuffer.background(cnv.backColor);
+
+    // Lighting
+    obj3dBuffer.ambientLight(obj3d.lights.ambient);
+    const lc = p.color(obj3d.lights.dirColor);
+    obj3dBuffer.directionalLight(
+      p.red(lc), p.green(lc), p.blue(lc),
+      obj3d.lights.dirX, obj3d.lights.dirY, obj3d.lights.dirZ,
+    );
+
+    if (obj3d.cameraType === 'ortho') {
+      const hw = sceneW / 2;
+      const hh = sceneH / 2;
+      obj3dBuffer.ortho(-hw, hw, -hh, hh, -10000, 10000);
+    }
+
+    obj3dBuffer.push();
+    obj3dBuffer.translate(tx, ty, tz);
+    obj3dBuffer.rotateX(obj3d.rotX);
+    obj3dBuffer.rotateY(obj3d.rotY);
+    obj3dBuffer.rotateZ(obj3d.rotZ);
+    obj3dBuffer.scale(obj3d.scale);
+    obj3dBuffer.model(media.model);
+    obj3dBuffer.pop();
+  }
+
+  function resizeForMedia(p, source) {
     calculateCanvasSize();
     createBuffers(p, cnv.width, cnv.height);
 
     if (gImg) gImg.remove();
     gImg = p.createGraphics(cnv.width, cnv.height);
     gImg.pixelDensity(1);
+
+    // Draw source immediately for images so the shader has content on the first frame.
+    // Videos redraw every frame in the draw loop; no need to draw here.
+    if (source && media.type === 'image') {
+      gImg.image(source, 0, 0, gImg.width, gImg.height);
+    }
   }
 
   function calculateCanvasSize() {
@@ -483,6 +560,9 @@ export async function loadDitherTool(canvasContainer, paneContainer) {
     uiInstance,
     handleFile: (file) => {
       if (fileHandler) handleFileMedia(p5Instance, file, fileHandler);
-    }
+    },
+    dispose: () => {
+      if (obj3dBuffer) { obj3dBuffer.remove(); obj3dBuffer = null; }
+    },
   };
 }
