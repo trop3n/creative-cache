@@ -79,20 +79,20 @@ async function loadTool(toolId) {
 }
 
 async function cleanupCurrentTool() {
-  // Cleanup UI
-  if (state.uiInstance && state.uiInstance.dispose) {
-    state.uiInstance.dispose();
+  // Cleanup tool (stops media, releases resources)
+  if (state.currentTool && state.currentTool.dispose) {
+    state.currentTool.dispose();
   }
-  
+
   // Cleanup p5 instance
   if (state.p5Instance) {
     state.p5Instance.remove();
   }
-  
+
   // Clear containers
   elements.canvasWrapper.innerHTML = '';
   elements.paneWrapper.innerHTML = '';
-  
+
   // Reset state
   state.currentTool = null;
   state.p5Instance = null;

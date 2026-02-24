@@ -55,7 +55,8 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
         },
         
         onSpeedChange: (speed) => {
-          if (source.video) {
+          // playbackRate only works for file videos, not live streams
+          if (source.video && source.type === 'file') {
             source.video.playbackRate = speed;
           }
         },
@@ -70,11 +71,13 @@ export async function loadTrackTool(canvasContainer, paneContainer) {
           frameCanvas.height = perfRes.height;
           motionDetector.resize(perfRes.width, perfRes.height);
           effectRenderer.resize(canvas.width, canvas.height);
-          
-          video.playbackRate = source.playbackSpeed;
+
+          if (source.type === 'file') {
+            video.playbackRate = source.playbackSpeed;
+          }
           refreshUI();
         },
-        
+
         onSourceStop: () => {
           const perfRes = getPerformanceResolution();
           motionDetector.resize(perfRes.width, perfRes.height);
