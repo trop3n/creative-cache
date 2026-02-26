@@ -206,3 +206,45 @@ Skew Level = refraction/lens strength within each cell.
 | `presets.js` | Rewrite — 10 presets using new state structure |
 | `media.js` | Keep, already fixed (container parameter) |
 | `main.js` | Deleted — rendering logic absorbed into `index.js` |
+
+---
+
+## SPLITX Tool — Rebuild Reference
+
+**Full reference doc:** `docs/plans/2026-02-26-splitx-reference.md`
+
+Current `src/tools/split/` is a non-functional placeholder (raw HTML sliders, no Tweakpane, no real rendering). All files need a full rewrite.
+
+### Core Concept
+
+Draws **N copies of a vector shape**, each offset by **Transition** XY and multiplied by **Scale Sequence**. The stack is mirrored by **Split Mask** and animated by **4 independent motion channels**.
+
+### UI Structure: MAIN | EXPORT | OPTIONS
+
+**CANVAS:** Canvas Ratio (11 options), Background (Custom / Use Palette Color / Transparent)
+
+**SHAPE:** Choose Type (Rectangle, Circle, Ring, Oval, Triangle, Rhombus, Cross, Star, Hexagon, Petals, Checker, Blob, Organic, Custom SVG), Shape Count, Scale Sequence
+
+**COLOR:** Styling Type (Fill/Stroke), Stroke Width, Drawing Mode (Single Color / Sequence / Transition RGB / Transition LCH), 5-color palette, Color Preset buttons, Get Random Palette
+
+**TRANSFORM:** Split Mask (None/Horizontal/Vertical/Quad), Scale, Rotation, Position (XY), Transition (XY — the key creative parameter)
+
+**Motion (4 tabs: SCALE | X MOVE | Y MOVE | ROTATE):** Each independent. Motion Type = Off / Noise / Sinusoidal.
+- Noise params: Effect Order, Amplitude, Frequency, Speed, Noise Seed
+- Sinusoidal params: Effect Order, Amplitude, Frequency, Cycles, Phase
+- Effect Order: Forward (staggered per copy) / Backward / Equal (all copies move as one)
+
+**EXPORT:** SVG File / PNG File / MP4 File / PNG Sequence / WEBP Sequence. Export Size, Length, Quality.
+
+**OPTIONS:** Fullscreen, Canvas Margins, Wheel Sensitivity, Browser Color
+
+### Interactive Controls
+Hold Click+Drag → Position | Hold Click+Shift+Drag → Transition | Scroll+Shift → Scale | Scroll+Ctrl → Rotation | Drop SVG → load custom shape | Drop JSON → import preset
+
+### Key Implementation Notes
+- **paper.js** for rendering (already a dependency)
+- **Split Mask** = mirror via paper.js transforms into quadrants
+- **Scale Sequence** loop: `scale = initialScale * pow(scaleSequence, i)` per copy
+- **LCH interpolation**: chroma.js supports `chroma.mix(c1, c2, t, 'lch')` — consider adding
+- **Noise motion**: `simplex.noise2D(i * frequency + seed, time * speed) * amplitude` per copy
+- **Sinusoidal motion**: `sin(i * frequency * cycles + phase + time) * amplitude` per copy
