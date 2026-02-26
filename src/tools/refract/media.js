@@ -7,11 +7,10 @@ import { media } from './state.js';
 /**
  * Set up media handling including drag-drop and file input.
  */
-export function setupMedia(p, onMediaLoaded) {
-  const container = document.getElementById('canvas-container');
+export function setupMedia(p, container, onMediaLoaded) {
   const fileInput = document.getElementById('fileInput');
-  const dropIndicator = container.querySelector('.drop-indicator');
-  
+  const dropIndicator = container?.querySelector('.drop-indicator');
+
   if (!container || !fileInput) return;
   
   // File input change handler

@@ -1,333 +1,149 @@
 // ============================================================
-// Preset Management for REFRACT Tool
+// REFRACT Tool — Presets
 // ============================================================
 
-import { distortion, processing, canvas, cloneState, applyState } from './state.js';
+import { canvas, transform, refract, cloneState, applyState } from './state.js';
 
-// Built-in presets
-export const builtinPresets = {
-  'Liquid Glass': {
-    distortion: {
-      type: 'refraction',
-      amount: 0.6,
-      scale: 2.5,
-      refraction: {
-        index: 1.8,
-        thickness: 0.4,
-        chromaticAberration: 0.15,
-      },
-    },
-    processing: {
-      brightness: 1.05,
-      contrast: 1.1,
-      saturation: 1.2,
-    },
+// ── Built-in presets ─────────────────────────────────────────
+const builtinPresets = {
+  'Preset 1': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'box', seed: 0,
+                 box: { x: { amplify: 2.0, frequency: 4.0, speed: 0.0 },
+                        y: { amplify: 2.0, frequency: 4.0, speed: 0.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Water Ripple': {
-    distortion: {
-      type: 'ripple',
-      amount: 0.8,
-      ripple: {
-        frequency: 15,
-        amplitude: 0.15,
-        phase: 0,
-        centerX: 0.5,
-        centerY: 0.5,
-        damping: 0.4,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.0,
-      saturation: 1.1,
-    },
+
+  'Preset 2': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'box', seed: 42,
+                 box: { x: { amplify: 6.0, frequency: 20.0, speed: 8.0 },
+                        y: { amplify: 6.0, frequency: 25.0, speed: 10.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Heat Wave': {
-    distortion: {
-      type: 'wave',
-      amount: 0.7,
-      scale: 1.0,
-      wave: {
-        frequencyX: 20,
-        frequencyY: 5,
-        amplitudeX: 0.08,
-        amplitudeY: 0.02,
-        phase: 0,
-      },
-    },
-    processing: {
-      brightness: 1.1,
-      contrast: 0.95,
-      saturation: 0.9,
-    },
+
+  'Preset 3': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'flow', seed: 12,
+                 flow: { complexity: 3, frequency: 3.0,
+                         x: { amplify: 5.0, speed: 5.0 },
+                         y: { amplify: 5.0, speed: 3.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Magnifying Glass': {
-    distortion: {
-      type: 'lens',
-      amount: 1.0,
-      lens: {
-        strength: 1.5,
-        radius: 0.35,
-        centerX: 0.5,
-        centerY: 0.5,
-      },
-    },
-    processing: {
-      brightness: 1.15,
-      contrast: 1.1,
-      saturation: 1.1,
-    },
+
+  'Preset 4': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'flow', seed: 77,
+                 flow: { complexity: 2, frequency: 1.5,
+                         x: { amplify: 12.0, speed: 8.0 },
+                         y: { amplify: 3.0,  speed: 4.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Swirl Vortex': {
-    distortion: {
-      type: 'twirl',
-      amount: 1.0,
-      twirl: {
-        angle: 360,
-        radius: 0.5,
-        centerX: 0.5,
-        centerY: 0.5,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.05,
-      saturation: 1.15,
-    },
+
+  'Preset 5': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'sine', seed: 0,
+                 sine: { x: { amplify: 3.0, frequency: 8.0,  speed: 0.0 },
+                         y: { amplify: 3.0, frequency: 8.0,  speed: 0.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Barrel Distortion': {
-    distortion: {
-      type: 'barrel',
-      amount: 1.0,
-      barrel: {
-        strength: 0.5,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.0,
-      saturation: 1.0,
-    },
+
+  'Preset 6': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'sine', seed: 0,
+                 sine: { x: { amplify: 1.5, frequency: 30.0, speed: 10.0 },
+                         y: { amplify: 1.5, frequency: 30.0, speed: 10.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Noise Displacement': {
-    distortion: {
-      type: 'displacement',
-      amount: 0.4,
-      scale: 3.0,
-      displacement: {
-        source: 'noise',
-        noiseType: 'simplex',
-        intensity: 0.6,
-        offsetX: 0,
-        offsetY: 0,
-        animate: true,
-        speed: 0.3,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.1,
-      saturation: 1.0,
-    },
+
+  'Preset 7': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'box', seed: 33,
+                 box: { x: { amplify: 4.0, frequency: 10.0, speed: 5.0 },
+                        y: { amplify: 4.0, frequency: 10.0, speed: 5.0 } } },
+    refract:   { type: 'grid', grid: { x: { skewLevel: 1.25, gridAmount: 20 },
+                                       y: { skewLevel: 1.25, gridAmount: 20 } } },
   },
-  
-  'Checkerboard Warp': {
-    distortion: {
-      type: 'displacement',
-      amount: 0.5,
-      scale: 2.0,
-      displacement: {
-        source: 'checker',
-        intensity: 0.4,
-        offsetX: 0,
-        offsetY: 0,
-        animate: false,
-        speed: 0,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.2,
-      saturation: 0.9,
-    },
+
+  'Preset 8': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'flow', seed: 601,
+                 flow: { complexity: 3, frequency: 15.1,
+                         x: { amplify: 20.0, speed: 33.0 },
+                         y: { amplify: 5.0,  speed: 15.0 } } },
+    refract:   { type: 'grid', grid: { x: { skewLevel: 1.25, gridAmount: 20 },
+                                       y: { skewLevel: 1.25, gridAmount: 20 } } },
   },
-  
-  'Fish Eye': {
-    distortion: {
-      type: 'pinch',
-      amount: 1.0,
-      pinch: {
-        strength: -0.8,
-        radius: 0.6,
-        centerX: 0.5,
-        centerY: 0.5,
-      },
-    },
-    processing: {
-      brightness: 1.1,
-      contrast: 1.15,
-      saturation: 1.2,
-    },
+
+  'Preset 9': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'flow', seed: 200,
+                 flow: { complexity: 6, frequency: 5.0,
+                         x: { amplify: 8.0, speed: 0.0 },
+                         y: { amplify: 8.0, speed: 0.0 } } },
+    refract:   { type: 'none' },
   },
-  
-  'Pincushion': {
-    distortion: {
-      type: 'pinch',
-      amount: 1.0,
-      pinch: {
-        strength: 0.7,
-        radius: 0.5,
-        centerX: 0.5,
-        centerY: 0.5,
-      },
-    },
-    processing: {
-      brightness: 1.0,
-      contrast: 1.1,
-      saturation: 0.95,
-    },
+
+  'Preset 10': {
+    canvas:    { textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0, background: 'custom', canvasColor: '#ffffff' },
+    transform: { displaceType: 'box', seed: 601,
+                 box: { x: { amplify: 8.0, frequency: 40.0, speed: 35.0 },
+                        y: { amplify: 7.0, frequency: 50.0, speed: 50.0 } } },
+    refract:   { type: 'none' },
   },
 };
 
-// User presets storage
+// ── User presets (localStorage) ───────────────────────────────
 let userPresets = {};
-
-// Load user presets from localStorage
 try {
-  const saved = localStorage.getItem('refract_user_presets');
-  if (saved) {
-    userPresets = JSON.parse(saved);
-  }
+  const saved = localStorage.getItem('refract_user_presets_v2');
+  if (saved) userPresets = JSON.parse(saved);
 } catch (e) {
   console.warn('Could not load user presets:', e);
 }
 
-// Get preset names for dropdown
-export const presetNames = Object.keys(builtinPresets);
-export const userPresetNames = () => Object.keys(userPresets);
+// ── Preset options map for Tweakpane ──────────────────────────
+// Mutable object — mutated in-place by refreshPresetOptions so
+// Tweakpane picks up changes on the next pane.refresh() call.
+export const presetOptions = _buildOptions();
 
-// Build options object for Tweakpane
-export const presetOptions = {
-  '** User Preset **': '** User Preset **',
-  ...Object.fromEntries(Object.keys(builtinPresets).map(k => [k, k])),
-  ...(Object.keys(userPresets).length > 0 ? { '---': '---' } : {}),
-  ...Object.fromEntries(Object.keys(userPresets).map(k => [k, k])),
-};
+function _buildOptions() {
+  const opts = {};
+  for (const k of Object.keys(builtinPresets)) opts[k] = k;
+  for (const k of Object.keys(userPresets))    opts[k] = k;
+  return opts;
+}
 
-// Load a preset
+export function refreshPresetOptions() {
+  // Mutate in-place so the Tweakpane binding's captured reference stays valid
+  for (const k of Object.keys(presetOptions)) delete presetOptions[k];
+  Object.assign(presetOptions, _buildOptions());
+}
+
+// ── Load ──────────────────────────────────────────────────────
 export function loadPreset(name) {
-  if (name === '** User Preset **') return false;
-  if (name === '---') return false;
-  
-  let presetData;
-  if (builtinPresets[name]) {
-    presetData = builtinPresets[name];
-  } else if (userPresets[name]) {
-    presetData = userPresets[name];
-  } else {
-    return false;
-  }
-  
-  // Apply preset data
-  if (presetData.distortion) {
-    applyState(distortion, presetData.distortion);
-  }
-  if (presetData.processing) {
-    applyState(processing, presetData.processing);
-  }
-  
+  const data = builtinPresets[name] ?? userPresets[name];
+  if (!data) return false;
+  if (data.canvas)    applyState(canvas,    data.canvas);
+  if (data.transform) applyState(transform, data.transform);
+  if (data.refract)   applyState(refract,   data.refract);
   return true;
 }
 
-// Save current settings as user preset
-export function saveUserPreset(name) {
-  if (!name || name === '** User Preset **' || name === '---') {
-    // Generate unique name
-    let i = 1;
-    name = `User Preset ${i}`;
-    while (userPresets[name]) {
-      i++;
-      name = `User Preset ${i}`;
-    }
-  }
-  
+// ── Save ──────────────────────────────────────────────────────
+export function saveUserPreset() {
+  let i = 1;
+  let name = `User Preset ${i}`;
+  while (userPresets[name]) { i++; name = `User Preset ${i}`; }
   userPresets[name] = {
-    distortion: cloneState(distortion),
-    processing: cloneState(processing),
+    canvas:    cloneState(canvas),
+    transform: cloneState(transform),
+    refract:   cloneState(refract),
   };
-  
-  // Save to localStorage
   try {
-    localStorage.setItem('refract_user_presets', JSON.stringify(userPresets));
+    localStorage.setItem('refract_user_presets_v2', JSON.stringify(userPresets));
   } catch (e) {
     console.warn('Could not save user presets:', e);
   }
-  
   return name;
-}
-
-// Delete a user preset
-export function deleteUserPreset(name) {
-  if (userPresets[name]) {
-    delete userPresets[name];
-    try {
-      localStorage.setItem('refract_user_presets', JSON.stringify(userPresets));
-    } catch (e) {
-      console.warn('Could not save user presets:', e);
-    }
-    return true;
-  }
-  return false;
-}
-
-// Export preset to JSON string
-export function exportPreset() {
-  const data = {
-    distortion: cloneState(distortion),
-    processing: cloneState(processing),
-    canvas: {
-      ratio: canvas.ratio,
-      scale: canvas.scale,
-    },
-  };
-  return JSON.stringify(data, null, 2);
-}
-
-// Import preset from JSON string
-export function importPreset(jsonString) {
-  try {
-    const data = JSON.parse(jsonString);
-    
-    if (data.distortion) {
-      applyState(distortion, data.distortion);
-    }
-    if (data.processing) {
-      applyState(processing, data.processing);
-    }
-    if (data.canvas) {
-      if (data.canvas.ratio) canvas.ratio = data.canvas.ratio;
-      if (data.canvas.scale !== undefined) canvas.scale = data.canvas.scale;
-    }
-    
-    return true;
-  } catch (e) {
-    console.error('Failed to import preset:', e);
-    return false;
-  }
-}
-
-// Refresh preset options (call after adding/deleting user presets)
-export function refreshPresetOptions() {
-  Object.assign(presetOptions, {
-    '** User Preset **': '** User Preset **',
-    ...Object.fromEntries(Object.keys(builtinPresets).map(k => [k, k])),
-    ...(Object.keys(userPresets).length > 0 ? { '---': '---' } : {}),
-    ...Object.fromEntries(Object.keys(userPresets).map(k => [k, k])),
-  });
 }

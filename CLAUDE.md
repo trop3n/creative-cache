@@ -70,3 +70,139 @@ if (typeof window.electronAPI !== 'undefined') { ... }
 ## CSS Theme
 
 All colors and layout dimensions are CSS variables in `styles/main.css` (e.g. `--bg-primary`, `--accent-primary: #4a9eff`, `--sidebar-width: 280px`, `--pane-width: 320px`). Dark theme throughout.
+
+---
+
+## REFRACT Tool — Rebuild Reference
+
+The current REFRACT implementation (`src/tools/refract/`) is a placeholder that does not match the target architecture. A full rebuild is pending. All reference data is captured here.
+
+### Target Architecture
+
+Two stacked filters, not 8 separate effect types:
+
+1. **TRANSFORM FILTERS** — primary displacement engine (single shader, 3 modes)
+2. **REFRACT FILTER** — optional secondary pass applied on top of the displaced result
+
+UI tab structure: **MAIN | EXPORT | OPTIONS | LICENSE**
+
+### MAIN Tab — Canvas Settings
+
+| Parameter | Type | Notes |
+|---|---|---|
+| Preset List | dropdown | Preset 1–10 + user presets |
+| Texture Wrap | dropdown | **Mirror** (default) — also Repeat, Clamp |
+| Content Scale | two floats (X, Y) | Scale of source image before displacement |
+| Background | dropdown | Custom / transparent options |
+| Canvas Color | color picker | #ffffff default |
+
+**Texture Wrap: Mirror is critical.** All 10 reference presets use Mirror. The current shader does `clamp(distortedUV, 0.0, 1.0)` which is wrong — it must use mirror wrapping: `abs(mod(uv - 1.0, 2.0) - 1.0)`. This produces the "folded paper / topographic contour" look. Without it the outputs are flat and wrong.
+
+### TRANSFORM FILTERS
+
+**Displace Type options:** `Box Displace` | `Flow Displace` | `Sine Displace`
+
+Parameters differ by type:
+
+**Box Displace** (per-axis Frequency):
+```
+Noise Seed
+X Axis: Amplify, Frequency, Speed
+Y Axis: Amplify, Frequency, Speed
+```
+
+**Flow Displace** (global Frequency + Complexity, no per-axis Frequency):
+```
+Noise Seed
+Complexity      ← octave count, global
+Frequency       ← global (single value, not per-axis)
+X Axis: Amplify, Speed
+Y Axis: Amplify, Speed
+```
+
+**Sine Displace** (inferred same structure as Box):
+```
+Noise Seed
+X Axis: Amplify, Frequency, Speed
+Y Axis: Amplify, Frequency, Speed
+```
+
+**Preset 10 values (Box Displace):**
+Seed: 601 | X: Amp 8.0, Freq 40.0, Speed 35 | Y: Amp 7.0, Freq 50.0, Speed 50
+
+**A Flow Displace preset values:**
+Seed: 601 | Complexity: 3 | Frequency: 15.1 | X: Amp 20.0, Speed 33 | Y: Amp 5.0, Speed 15
+
+Parameter ranges are much higher than typical defaults — Amplify reaches 20+, Frequency reaches 40–50. The visual effect only becomes interesting above Amplify ~1.5.
+
+### REFRACT FILTER
+
+**Refract Type options:** `None` | `Grid`
+
+**Grid settings (per-axis):**
+```
+X Axis: Skew Level, Grid Amount
+Y Axis: Skew Level, Grid Amount
+```
+Grid Amount = number of lens cells across that axis. Grid Amount 20 = 20×20 grid.
+Skew Level = refraction/lens strength within each cell.
+
+**A Grid preset values:** X: Skew 1.25, Grid 20 | Y: Skew 1.25, Grid 20
+
+### Displacement Type → Visual Output Mapping
+
+| Type | Visual character | Mechanism |
+|---|---|---|
+| Box Displace | Rectangular nested forms, grid of boxy cells | Per-cell hash noise (`floor(uv * freq)` → random offset per cell) |
+| Flow Displace | Organic blobs, petals, ribbon folds | Simplex noise flow field, `Complexity` octaves |
+| Sine Displace | Concentric rings, ripple, radial patterns | Radial/directional sine wave per axis |
+
+### Target State Structure
+
+```js
+// canvas additions
+{ textureWrap: 'mirror', contentScaleX: 1.0, contentScaleY: 1.0,
+  background: 'custom', canvasColor: '#ffffff' }
+
+// transform (replaces current distortion object entirely)
+{ displaceType: 'box',   // 'box' | 'flow' | 'sine'
+  seed: 0,
+  box:  { x: { amplify: 1.0, frequency: 1.0, speed: 0.0 },
+          y: { amplify: 1.0, frequency: 1.0, speed: 0.0 } },
+  flow: { complexity: 3, frequency: 1.0,
+          x: { amplify: 1.0, speed: 0.0 },
+          y: { amplify: 1.0, speed: 0.0 } },
+  sine: { x: { amplify: 1.0, frequency: 1.0, speed: 0.0 },
+          y: { amplify: 1.0, frequency: 1.0, speed: 0.0 } } }
+
+// refract (replaces current distortion sub-types)
+{ type: 'none',   // 'none' | 'grid'
+  grid: { x: { skewLevel: 1.25, gridAmount: 20 },
+          y: { skewLevel: 1.25, gridAmount: 20 } } }
+```
+
+### Shader Plan
+
+**Pass 1 — Displacement shader** (single shader, `u_displaceType` int selects mode):
+- `0 = Box`: `floor(uv * freq)` → per-cell hash → random offset vector per cell
+- `1 = Flow`: simplex noise, `u_complexity` octaves, global `u_frequency`
+- `2 = Sine`: radial sine wave per axis with independent frequency
+- All modes: mirror UV wrapping, separate X/Y amplify and speed
+- Animation: `u_time` drives Speed uniforms
+
+**Pass 2 — Grid refract shader** (only when `refract.type === 'grid'`):
+- Divide UV into `gridAmountX × gridAmountY` cells
+- Apply radial lens displacement within each cell using `skewLevel` as strength
+- Renders into a second WEBGL graphics buffer, composited on top
+
+### Files to Rebuild
+
+| File | Action |
+|---|---|
+| `state.js` | Full rewrite — replace `distortion` object with `transform` + `refract` + updated `canvas` |
+| `shaders.js` | Full rewrite — one unified displacement shader + one grid refract shader |
+| `index.js` | Rewrite — two-pass render, animation loop, mirror wrap |
+| `ui.js` | Rewrite — MAIN/EXPORT/OPTIONS tabs, TRANSFORM FILTERS section, REFRACT FILTER section |
+| `presets.js` | Rewrite — 10 presets using new state structure |
+| `media.js` | Keep, already fixed (container parameter) |
+| `main.js` | Deleted — rendering logic absorbed into `index.js` |
