@@ -1,208 +1,168 @@
 // ============================================================
-// Mutable State Objects - Central Store for All Parameters
+// SPLITX Tool — State
 // ============================================================
 
-// Canvas settings
+// ── Canvas ───────────────────────────────────────────────────
 export const canvas = {
-  width: 800,
-  height: 800,
-  scale: 0.9,
-  ratio: '1:1',
-  background: '#111111',
+  width:       800,
+  height:      800,
+  ratio:       '1:1',
+  background:  'custom',   // 'custom' | 'palette' | 'transparent'
+  canvasColor: '#111111',
+  paletteBgSlot: 0,        // which palette index to use for bg
+  scale:       0.95,
 };
 
-// Available aspect ratios
-export const resolutions = {
-  '1:1': { width: 1200, height: 1200 },
-  '4:3': { width: 1200, height: 900 },
-  '16:9': { width: 1920, height: 1080 },
-  '9:16': { width: 1080, height: 1920 },
-  '3:4': { width: 900, height: 1200 },
-  '2:1': { width: 1600, height: 800 },
-  '1:2': { width: 800, height: 1600 },
+export const ratioOptions = {
+  '2:1': [2,1], '16:9': [16,9], '3:2': [3,2], '4:3': [4,3], '5:4': [5,4],
+  '1:1': [1,1], '4:5': [4,5],  '3:4': [3,4], '2:3': [2,3], '9:16': [9,16], '1:2': [1,2],
 };
 
-// Built-in shape options
-export const shapeOptions = {
-  'Circle': 'circle',
-  'Square': 'square',
-  'Triangle': 'triangle',
-  'Hexagon': 'hexagon',
-  'Star': 'star',
-  'Heart': 'heart',
-  'Cross': 'cross',
-  'Diamond': 'diamond',
-  'Custom SVG': 'custom',
-};
-
-// Split mode options
-export const splitOptions = {
-  'None': 'none',
-  'Horizontal': 'horizontal',
-  'Vertical': 'vertical',
-  'Four Sections': 'four',
-};
-
-// Animation mode options
-export const animOptions = {
-  'None': 'none',
-  'Noise': 'noise',
-  'Sine': 'sine',
-  'Cosine': 'cosine',
-  'Combined': 'combined',
-};
-
-// Blend mode options
-export const blendOptions = {
-  'Normal': 'normal',
-  'Multiply': 'multiply',
-  'Screen': 'screen',
-  'Overlay': 'overlay',
-  'Difference': 'difference',
-};
-
-// Shape settings
-export const shape = {
-  type: 'circle',
-  size: 100,
-  strokeWeight: 2,
-  strokeColor: '#ffffff',
-  fillColor: '#4a9eff',
-  fillOpacity: 0,
-  strokeOpacity: 1,
-};
-
-// Duplication settings
-export const duplication = {
-  count: 20,
-  spacing: 15,
-  spread: 200,
-};
-
-// Transformation settings
-export const transform = {
-  offsetX: 0,
-  offsetY: 0,
-  scaleMin: 0.5,
-  scaleMax: 1.5,
-  rotation: 0,
-  rotationStep: 5,
-};
-
-// Animation settings
-export const animation = {
-  enabled: true,
-  mode: 'noise',
-  speed: 0.5,
-  amplitude: 50,
-  frequency: 0.01,
-  noiseScale: 0.005,
-};
-
-// Split settings
-export const split = {
-  mode: 'none',
-  gap: 0,
-};
-
-// Color settings
-export const color = {
-  useGradient: false,
-  gradientStart: '#4a9eff',
-  gradientEnd: '#ff4a9e',
-  hueShift: false,
-  hueSpeed: 0.5,
-};
-
-// Interactive controls
-export const interactive = {
-  posX: 0,
-  posY: 0,
-  transition: 0,
-  canvasScale: 1,
-  canvasRotation: 0,
-};
-
-// Export settings
-export const exportSettings = {
-  format: 'PNG',
-  scale: 1,
-  fps: 30,
-  duration: 3,
-  quality: 0.92,
-  status: 'Ready',
-};
-
-// Export format options
-export const exportFormatOptions = {
-  'PNG': 'PNG',
-  'JPG': 'JPG',
-  'SVG': 'SVG',
-  'MP4': 'MP4',
-  'WebM': 'WebM',
-  'PNG Sequence': 'PNGSequence',
-  'WebP Sequence': 'WebPSequence',
-};
-
-// State for custom SVG
-export const customSvg = {
-  data: null,
-  pathData: null,
-  loaded: false,
-};
-
-// Animation state (not exposed in UI)
-export const animState = {
-  time: 0,
-  frameCount: 0,
-  isPlaying: true,
-  seed: Math.random() * 1000,
-};
-
-// Utility functions
-export function cloneState(obj) {
-  return JSON.parse(JSON.stringify(obj));
-}
-
-export function applyState(target, source) {
-  for (const key of Object.keys(source)) {
-    if (typeof source[key] === 'object' && !Array.isArray(source[key]) && source[key] !== null) {
-      if (!target[key]) target[key] = {};
-      applyState(target[key], source[key]);
-    } else {
-      target[key] = source[key];
-    }
-  }
-}
-
-// Calculate canvas size based on window and aspect ratio
-export function calculateCanvasSize() {
-  const [rw, rh] = canvas.ratio.split(':').map(Number);
-  const maxRes = resolutions[canvas.ratio];
-  const panelW = 340; // UI panel width
-  
-  const availW = (window.innerWidth - panelW) * canvas.scale;
-  const availH = window.innerHeight * canvas.scale;
-  
-  const aspectRatio = rw / rh;
-  let w = availW;
-  let h = w / aspectRatio;
-  
-  if (h > availH) {
-    h = availH;
-    w = h * aspectRatio;
-  }
-  
-  // Cap at max resolution
-  w = Math.min(w, maxRes.width);
-  h = Math.min(h, maxRes.height);
-  
-  // Even dimensions for video encoding
+export function computeCanvasSize() {
+  const [rw, rh] = ratioOptions[canvas.ratio];
+  const aspect   = rw / rh;
+  const maxW = window.innerWidth  * 0.72 * canvas.scale;
+  const maxH = window.innerHeight * canvas.scale;
+  let w = maxW, h = w / aspect;
+  if (h > maxH) { h = maxH; w = h * aspect; }
   w = Math.floor(w) - (Math.floor(w) % 2);
   h = Math.floor(h) - (Math.floor(h) % 2);
-  
-  canvas.width = w;
-  canvas.height = h;
-  
-  return { width: w, height: h };
+  canvas.width  = Math.max(w, 2);
+  canvas.height = Math.max(h, 2);
+}
+
+// ── Shape ────────────────────────────────────────────────────
+export const shape = {
+  type:     'circle',
+  count:    20,
+  sequence: 0.5,    // scale sequence (fraction; can be negative)
+};
+
+export const shapeTypeOptions = {
+  Rectangle: 'rectangle', Circle: 'circle',   Ring:    'ring',
+  Oval:      'oval',      Triangle: 'triangle', Rhombus: 'rhombus',
+  Cross:     'cross',     Star: 'star',         Hexagon: 'hexagon',
+  Petals:    'petals',    Checker: 'checker',   Blob:    'blob',
+  Organic:   'organic',   Custom:  'custom',
+};
+
+// ── Color ────────────────────────────────────────────────────
+export const color = {
+  stylingType:  'stroke',
+  strokeWidth:  2,
+  drawingMode:  'sequence', // 'xor' | 'sequence' | 'rgb' | 'lch'
+  paletteIndex: 0,          // which slot is selected for editing
+  paletteUse:   [true, true, true, true, true],
+  palette:      ['#4a9eff', '#ff4a9e', '#ffe04a', '#4affc3', '#ff7a4a'],
+};
+
+export const drawingModeOptions = {
+  'Cutout (XOR)':     'xor',
+  'Sequence':         'sequence',
+  'Transition (RGB)': 'rgb',
+  'Transition (LCH)': 'lch',
+};
+
+export const colorPresets = [
+  ['#4a9eff', '#ff4a9e', '#ffe04a', '#4affc3', '#ff7a4a'],
+  ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'],
+  ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#c77dff'],
+  ['#ffffff', '#c8c8c8', '#909090', '#484848', '#111111'],
+  ['#2d00f7', '#6a00f4', '#8900f2', '#bc00dd', '#e500a4'],
+];
+
+// ── Transform ────────────────────────────────────────────────
+export const transform = {
+  splitMask:  'none',
+  scale:      1.0,
+  rotation:   0,
+  position:   { x: 0.0, y: 0.0 },    // canvas-relative fractions (× halfWidth)
+  transition: { x: 0.0, y: 0.5 },    // canvas-relative fractions (× halfWidth)
+};
+
+export const splitMaskOptions = {
+  None: 'none', Horizontal: 'horizontal', Vertical: 'vertical', Quad: 'quad',
+};
+
+// ── Motion (4 channels) ───────────────────────────────────────
+function makeChannel() {
+  return {
+    type:  'off',
+    // All params stored for both noise and sine (preserved when switching types)
+    order: 'forward',
+    amp:   0.3,
+    freq:  0.5,
+    cycle: 2,
+    phase: 0.0,
+    speed: 0.3,
+    seed:  Math.floor(Math.random() * 1000),
+  };
+}
+
+export const motion = {
+  scale:  makeChannel(),
+  xMove:  makeChannel(),
+  yMove:  makeChannel(),
+  rotate: makeChannel(),
+};
+
+export const motionTypeOptions  = { Off: 'off', Noise: 'noise', Sinusoidal: 'sinusoidal' };
+export const effectOrderOptions = { Forward: 'forward', Backward: 'backward', Equal: 'equal' };
+
+// ── Export ───────────────────────────────────────────────────
+export const exportSettings = {
+  fileType: 'png',
+  size:     1.0,
+  length:   5,
+  quality:  90,
+  status:   'Ready',
+};
+
+export const fileTypeOptions = {
+  'SVG File': 'svg', 'PNG File': 'png', 'MP4 File': 'mp4',
+  'PNG Sequence': 'png-sequence', 'WEBP Sequence': 'webp-sequence',
+};
+
+// ── Options ──────────────────────────────────────────────────
+export const options = {
+  margins:     20,
+  wheelSens:   1.0,
+  browserColor: 10,
+};
+
+// ── Runtime (not serialized) ──────────────────────────────────
+export const animState = {
+  time:  0,   // seconds elapsed
+  frame: 0,   // integer tick counter
+};
+
+export const customSvg = {
+  item: null,  // paper.js Item set by media.js when an SVG is loaded
+};
+
+// ── Preset helpers ───────────────────────────────────────────
+export function cloneState() {
+  return JSON.parse(JSON.stringify({ canvas, shape, color, transform, motion, exportSettings }));
+}
+
+export function applyState(saved) {
+  function deepMerge(target, source) {
+    for (const key of Object.keys(source)) {
+      if (
+        typeof source[key] === 'object' && source[key] !== null &&
+        !Array.isArray(source[key]) &&
+        typeof target[key] === 'object' && target[key] !== null
+      ) {
+        deepMerge(target[key], source[key]);
+      } else {
+        target[key] = source[key];
+      }
+    }
+  }
+  if (saved.canvas)         deepMerge(canvas,         saved.canvas);
+  if (saved.shape)          deepMerge(shape,           saved.shape);
+  if (saved.color)          deepMerge(color,           saved.color);
+  if (saved.transform)      deepMerge(transform,       saved.transform);
+  if (saved.motion)         deepMerge(motion,          saved.motion);
+  if (saved.exportSettings) deepMerge(exportSettings,  saved.exportSettings);
 }

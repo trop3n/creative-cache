@@ -1,250 +1,210 @@
-import { 
-  canvas, shape, duplication, transform, animation, 
-  split, color, interactive, applyState, cloneState 
-} from './state.js';
-
 // ============================================================
-// Built-in Presets
+// SPLITX Tool — Presets
 // ============================================================
 
-const presetData = {
-  'Hypnotic Rings': {
-    canvas: { ratio: '1:1' },
-    shape: { 
-      type: 'circle', 
-      size: 80, 
-      strokeWeight: 2,
-      strokeColor: '#00ffff',
-      fillColor: '#000000',
-      fillOpacity: 0,
-      strokeOpacity: 1,
+import { cloneState, applyState } from './state.js';
+
+const STORAGE_KEY = 'splitx-user-preset-v2';
+
+// ── Helper: make a flat motion channel ───────────────────────
+function ch(type, order, amp, freq, cycle, phase, speed, seed) {
+  return { type, order, amp, freq, cycle, phase, speed, seed };
+}
+
+// ── Built-in presets (ported from reference allpresets.js) ───
+const BUILTIN = {
+  'Split Vibration': {
+    canvas:    { ratio: '1:1', background: 'palette', paletteBgSlot: 2, canvasColor: '#000000' },
+    shape:     { type: 'triangle', count: 40, sequence: -0.09 },
+    color:     { stylingType: 'fill', strokeWidth: 5, drawingMode: 'xor',
+                 paletteIndex: 2, paletteUse: [false, true, true, false, false],
+                 palette: ['#f19601', '#f21f26', '#251819', '#ebc83a', '#73b295'] },
+    transform: { splitMask: 'quad', scale: 0.48, rotation: 84,
+                 position: { x: -0.06, y: -0.24 }, transition: { x: 0.84, y: -1.0 } },
+    motion: {
+      scale:  ch('noise',      'equal',    -0.32, 0.38, 2,  0.50, 0.28, 679),
+      xMove:  ch('sinusoidal', 'forward',   0.15, 0.25, 2,  0.06, 0.27, 266),
+      yMove:  ch('sinusoidal', 'backward',  0.19, 0.36, 3,  0.00, 0.23, 602),
+      rotate: ch('sinusoidal', 'forward',   0.10, 0.75, 4,  0.43, 0.17, 665),
     },
-    duplication: { count: 30, spacing: 10, spread: 300 },
-    transform: { offsetX: 0, offsetY: 0, scaleMin: 0.2, scaleMax: 2, rotation: 0, rotationStep: 0 },
-    animation: { enabled: true, mode: 'sine', speed: 0.3, amplitude: 30, frequency: 0.02, noiseScale: 0.01 },
-    split: { mode: 'four', gap: 0 },
-    color: { useGradient: true, gradientStart: '#00ffff', gradientEnd: '#ff00ff', hueShift: true, hueSpeed: 0.3 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Noise Swarm': {
-    canvas: { ratio: '1:1' },
-    shape: { 
-      type: 'hexagon', 
-      size: 40, 
-      strokeWeight: 1,
-      strokeColor: '#ffffff',
-      fillColor: '#4a9eff',
-      fillOpacity: 0.3,
-      strokeOpacity: 0.8,
+
+  'Lotus Metamorphosis': {
+    canvas:    { ratio: '1:1', background: 'palette', paletteBgSlot: 1, canvasColor: '#000000' },
+    shape:     { type: 'organic', count: 100, sequence: 0.76 },
+    color:     { stylingType: 'stroke', strokeWidth: 3, drawingMode: 'lch',
+                 paletteIndex: 1, paletteUse: [true, true, true, true, true],
+                 palette: ['#fffdc0', '#b9d7a1', '#fead26', '#ca221f', '#590f0c'] },
+    transform: { splitMask: 'quad', scale: 1.0, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0, y: 0 } },
+    motion: {
+      scale:  ch('off',   'forward', 0.29, 0.00, 9, 0.13, 0.63, 729),
+      xMove:  ch('noise', 'equal',   0.44, 0.86, 7, 0.50, 0.27, 101),
+      yMove:  ch('noise', 'equal',   0.29, 0.99, 2, 0.32, 0.20, 551),
+      rotate: ch('noise', 'equal',   0.41, 0.54, 9, 0.40, 0.49, 471),
     },
-    duplication: { count: 50, spacing: 5, spread: 400 },
-    transform: { offsetX: 20, offsetY: 10, scaleMin: 0.3, scaleMax: 1.5, rotation: 45, rotationStep: 15 },
-    animation: { enabled: true, mode: 'noise', speed: 0.8, amplitude: 80, frequency: 0.01, noiseScale: 0.008 },
-    split: { mode: 'none', gap: 0 },
-    color: { useGradient: false, gradientStart: '#4a9eff', gradientEnd: '#ff4a9e', hueShift: true, hueSpeed: 0.5 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Kaleidoscope': {
-    canvas: { ratio: '1:1' },
-    shape: { 
-      type: 'triangle', 
-      size: 120, 
-      strokeWeight: 3,
-      strokeColor: '#ffcc00',
-      fillColor: '#ff0066',
-      fillOpacity: 0.2,
-      strokeOpacity: 1,
+
+  'Star Trails': {
+    canvas:    { ratio: '1:1', background: 'palette', paletteBgSlot: 4, canvasColor: '#000000' },
+    shape:     { type: 'star', count: 100, sequence: 0.5 },
+    color:     { stylingType: 'stroke', strokeWidth: 10, drawingMode: 'lch',
+                 paletteIndex: 0, paletteUse: [true, true, true, true, true],
+                 palette: ['#dbff0e', '#ffffff', '#f84d4d', '#003deb', '#000000'] },
+    transform: { splitMask: 'none', scale: 1.0, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0, y: 0 } },
+    motion: {
+      scale:  ch('off',        'forward',  0.27, 0.52, 8,  -0.27, 0.68, 333),
+      xMove:  ch('sinusoidal', 'forward',  0.39, 0.68, 4,  -0.24, 0.82, 13),
+      yMove:  ch('noise',      'equal',    0.18, 0.00, 6,   0.46, 0.14, 152),
+      rotate: ch('sinusoidal', 'forward',  0.16, 0.77, 4,  -0.03, 0.45, 221),
     },
-    duplication: { count: 12, spacing: 20, spread: 250 },
-    transform: { offsetX: 0, offsetY: 0, scaleMin: 0.1, scaleMax: 1.2, rotation: 30, rotationStep: 30 },
-    animation: { enabled: true, mode: 'combined', speed: 0.4, amplitude: 60, frequency: 0.015, noiseScale: 0.005 },
-    split: { mode: 'four', gap: 10 },
-    color: { useGradient: true, gradientStart: '#ffcc00', gradientEnd: '#ff0066', hueShift: false, hueSpeed: 0.2 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Vertical Mirror': {
-    canvas: { ratio: '9:16' },
-    shape: { 
-      type: 'diamond', 
-      size: 60, 
-      strokeWeight: 2,
-      strokeColor: '#00ff88',
-      fillColor: '#000000',
-      fillOpacity: 0,
-      strokeOpacity: 1,
+
+  'Wall Art Dynamics': {
+    canvas:    { ratio: '4:3', background: 'custom', paletteBgSlot: 4, canvasColor: '#000000' },
+    shape:     { type: 'checker', count: 50, sequence: 0.3 },
+    color:     { stylingType: 'fill', strokeWidth: 1.5, drawingMode: 'lch',
+                 paletteIndex: 4, paletteUse: [true, true, true, true, true],
+                 palette: ['#66a5ff', '#fffff8', '#deca95', '#d62e2e', '#123d3f'] },
+    transform: { splitMask: 'quad', scale: 1.5, rotation: 20,
+                 position: { x: -0.5, y: 0 }, transition: { x: 0, y: -0.1 } },
+    motion: {
+      scale:  ch('off',        'backward', 0.26, 0.81, 4, -0.47, 0.00, 230),
+      xMove:  ch('sinusoidal', 'equal',    0.28, 0.02, 3, -0.06, 0.35, 159),
+      yMove:  ch('noise',      'forward',  0.26, 0.62, 4, -0.13, 0.19, 592),
+      rotate: ch('off',        'equal',    0.20, 1.00, 0, -0.12, 0.24, 538),
     },
-    duplication: { count: 25, spacing: 15, spread: 350 },
-    transform: { offsetX: 10, offsetY: 5, scaleMin: 0.4, scaleMax: 1.3, rotation: 15, rotationStep: 8 },
-    animation: { enabled: true, mode: 'cosine', speed: 0.5, amplitude: 40, frequency: 0.025, noiseScale: 0.01 },
-    split: { mode: 'vertical', gap: 0 },
-    color: { useGradient: true, gradientStart: '#00ff88', gradientEnd: '#0088ff', hueShift: true, hueSpeed: 0.4 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Horizontal Wave': {
-    canvas: { ratio: '16:9' },
-    shape: { 
-      type: 'star', 
-      size: 50, 
-      strokeWeight: 1.5,
-      strokeColor: '#ff4444',
-      fillColor: '#ff8800',
-      fillOpacity: 0.4,
-      strokeOpacity: 0.9,
+
+  'Radical Vortex': {
+    canvas:    { ratio: '1:1', background: 'palette', paletteBgSlot: 0, canvasColor: '#ffffff' },
+    shape:     { type: 'triangle', count: 40, sequence: 0.4 },
+    color:     { stylingType: 'fill', strokeWidth: 2, drawingMode: 'lch',
+                 paletteIndex: 4, paletteUse: [true, true, true, true, true],
+                 palette: ['#493341', '#554865', '#cd5b51', '#f3a36b', '#eee6d7'] },
+    transform: { splitMask: 'quad', scale: 1.6, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0, y: 0 } },
+    motion: {
+      scale:  ch('noise',      'equal',   0.19, 0.62, 4, -0.27, 0.30, 477),
+      xMove:  ch('sinusoidal', 'equal',   0.19, 0.37, 4,  0.31, 0.31, 245),
+      yMove:  ch('sinusoidal', 'equal',   0.11, 0.43, 2,  0.00, 0.18, 519),
+      rotate: ch('noise',      'equal',   0.14, 0.26, 2,  0.47, 0.30, 341),
     },
-    duplication: { count: 40, spacing: 8, spread: 300 },
-    transform: { offsetX: 15, offsetY: 25, scaleMin: 0.2, scaleMax: 1.4, rotation: 72, rotationStep: 10 },
-    animation: { enabled: true, mode: 'sine', speed: 0.6, amplitude: 50, frequency: 0.02, noiseScale: 0.006 },
-    split: { mode: 'horizontal', gap: 5 },
-    color: { useGradient: true, gradientStart: '#ff4444', gradientEnd: '#ff8800', hueShift: false, hueSpeed: 0.3 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Minimal Static': {
-    canvas: { ratio: '1:1' },
-    shape: { 
-      type: 'square', 
-      size: 100, 
-      strokeWeight: 4,
-      strokeColor: '#ffffff',
-      fillColor: '#333333',
-      fillOpacity: 0.5,
-      strokeOpacity: 1,
+
+  'Hypnotic Garden': {
+    canvas:    { ratio: '1:1', background: 'custom', paletteBgSlot: 0, canvasColor: '#0a0a0a' },
+    shape:     { type: 'ring', count: 60, sequence: 0.5 },
+    color:     { stylingType: 'stroke', strokeWidth: 2, drawingMode: 'sequence',
+                 paletteIndex: 0, paletteUse: [true, true, true, true, true],
+                 palette: ['#e8f4f8', '#a8d8ea', '#aa96da', '#fcbad3', '#ffffd2'] },
+    transform: { splitMask: 'horizontal', scale: 1.1, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0.05, y: 0.18 } },
+    motion: {
+      scale:  ch('sinusoidal', 'forward',  0.08, 1.0, 2, 0.0,  0.3,  0),
+      xMove:  ch('off',        'forward',  0.30, 0.5, 1, 0.0,  0.5,  0),
+      yMove:  ch('off',        'forward',  0.30, 0.5, 1, 0.0,  0.5,  0),
+      rotate: ch('off',        'forward',  0.30, 0.5, 1, 0.0,  0.5,  0),
     },
-    duplication: { count: 5, spacing: 30, spread: 150 },
-    transform: { offsetX: 0, offsetY: 0, scaleMin: 0.5, scaleMax: 1, rotation: 0, rotationStep: 0 },
-    animation: { enabled: false, mode: 'none', speed: 0, amplitude: 0, frequency: 0, noiseScale: 0 },
-    split: { mode: 'none', gap: 0 },
-    color: { useGradient: false, gradientStart: '#ffffff', gradientEnd: '#000000', hueShift: false, hueSpeed: 0 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Organic Flow': {
-    canvas: { ratio: '4:3' },
-    shape: { 
-      type: 'circle', 
-      size: 30, 
-      strokeWeight: 0.5,
-      strokeColor: '#88ff00',
-      fillColor: '#44aa00',
-      fillOpacity: 0.6,
-      strokeOpacity: 0.5,
+
+  'Butterfly Effect': {
+    canvas:    { ratio: '1:1', background: 'palette', paletteBgSlot: 0, canvasColor: '#000000' },
+    shape:     { type: 'oval', count: 24, sequence: 0.9 },
+    color:     { stylingType: 'fill', strokeWidth: 2, drawingMode: 'lch',
+                 paletteIndex: 0, paletteUse: [true, true, true, true, true],
+                 palette: ['#fffdc0', '#b9d7a1', '#fead26', '#ca221f', '#590f0c'] },
+    transform: { splitMask: 'vertical', scale: 0.9, rotation: -81,
+                 position: { x: -0.25, y: -0.30 }, transition: { x: 0, y: 0 } },
+    motion: {
+      scale:  ch('off',        'forward',  0.29, 0.00, 9,  0.13, 0.63, 729),
+      xMove:  ch('noise',      'equal',    0.29, 0.62, 7,  0.49, 0.26, 374),
+      yMove:  ch('noise',      'equal',    0.21, 0.73, 5,  0.27, 0.19, 621),
+      rotate: ch('sinusoidal', 'forward',  0.10, 0.50, 3,  0.20, 0.25, 412),
     },
-    duplication: { count: 80, spacing: 3, spread: 500 },
-    transform: { offsetX: 8, offsetY: 12, scaleMin: 0.1, scaleMax: 2, rotation: 0, rotationStep: 5 },
-    animation: { enabled: true, mode: 'noise', speed: 1.2, amplitude: 100, frequency: 0.008, noiseScale: 0.003 },
-    split: { mode: 'horizontal', gap: 20 },
-    color: { useGradient: true, gradientStart: '#88ff00', gradientEnd: '#00ff44', hueShift: true, hueSpeed: 0.8 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
   },
-  
-  'Geometric Precision': {
-    canvas: { ratio: '1:1' },
-    shape: { 
-      type: 'hexagon', 
-      size: 70, 
-      strokeWeight: 2.5,
-      strokeColor: '#aa66ff',
-      fillColor: '#440088',
-      fillOpacity: 0.3,
-      strokeOpacity: 1,
+
+  'Cutout Progression': {
+    canvas:    { ratio: '1:1', background: 'custom', paletteBgSlot: 0, canvasColor: '#ffffff' },
+    shape:     { type: 'circle', count: 30, sequence: 0.6 },
+    color:     { stylingType: 'fill', strokeWidth: 2, drawingMode: 'xor',
+                 paletteIndex: 0, paletteUse: [true, false, false, false, false],
+                 palette: ['#1a1a2e', '#16213e', '#0f3460', '#533483', '#e94560'] },
+    transform: { splitMask: 'quad', scale: 0.9, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0.6, y: 0.6 } },
+    motion: {
+      scale:  ch('sinusoidal', 'equal',   0.12, 0.5, 3, 0.0,  0.4, 0),
+      xMove:  ch('off',        'forward', 0.30, 0.5, 1, 0.0,  0.5, 0),
+      yMove:  ch('off',        'forward', 0.30, 0.5, 1, 0.0,  0.5, 0),
+      rotate: ch('off',        'forward', 0.30, 0.5, 1, 0.0,  0.5, 0),
     },
-    duplication: { count: 15, spacing: 25, spread: 200 },
-    transform: { offsetX: 0, offsetY: 0, scaleMin: 0.6, scaleMax: 1.1, rotation: 60, rotationStep: 60 },
-    animation: { enabled: true, mode: 'combined', speed: 0.2, amplitude: 20, frequency: 0.03, noiseScale: 0.01 },
-    split: { mode: 'four', gap: 15 },
-    color: { useGradient: true, gradientStart: '#aa66ff', gradientEnd: '#ff66aa', hueShift: false, hueSpeed: 0.1 },
-    interactive: { posX: 0, posY: 0, transition: 0, canvasScale: 1, canvasRotation: 0 },
+  },
+
+  'Funky Beats': {
+    canvas:    { ratio: '1:1', background: 'custom', paletteBgSlot: 0, canvasColor: '#1a0533' },
+    shape:     { type: 'rhombus', count: 20, sequence: -0.05 },
+    color:     { stylingType: 'fill', strokeWidth: 2, drawingMode: 'sequence',
+                 paletteIndex: 0, paletteUse: [true, true, true, true, true],
+                 palette: ['#ff006e', '#fb5607', '#ffbe0b', '#8338ec', '#3a86ff'] },
+    transform: { splitMask: 'quad', scale: 0.85, rotation: 0,
+                 position: { x: 0, y: 0 }, transition: { x: 0, y: 0.28 } },
+    motion: {
+      scale:  ch('noise', 'equal',   0.15, 0.5, 2, 0.0, 2.0, 11),
+      xMove:  ch('noise', 'equal',   0.18, 0.8, 2, 0.0, 2.0, 22),
+      yMove:  ch('off',   'forward', 0.30, 0.5, 1, 0.0, 0.5, 0),
+      rotate: ch('noise', 'equal',   0.20, 0.6, 2, 0.0, 1.5, 33),
+    },
+  },
+
+  'Prismatic Mandala': {
+    canvas:    { ratio: '1:1', background: 'custom', paletteBgSlot: 0, canvasColor: '#0d0d0d' },
+    shape:     { type: 'hexagon', count: 50, sequence: 0.5 },
+    color:     { stylingType: 'stroke', strokeWidth: 1.5, drawingMode: 'rgb',
+                 paletteIndex: 0, paletteUse: [true, true, true, true, true],
+                 palette: ['#f72585', '#7209b7', '#3a0ca3', '#4361ee', '#4cc9f0'] },
+    transform: { splitMask: 'quad', scale: 1.2, rotation: 30,
+                 position: { x: 0, y: 0 }, transition: { x: 0, y: 0 } },
+    motion: {
+      scale:  ch('off',   'forward', 0.30, 0.5, 1, 0.0, 0.5, 0),
+      xMove:  ch('off',   'forward', 0.30, 0.5, 1, 0.0, 0.5, 0),
+      yMove:  ch('off',   'forward', 0.30, 0.5, 1, 0.0, 0.5, 0),
+      rotate: ch('noise', 'equal',   0.60, 0.2, 2, 0.0, 0.3, 77),
+    },
   },
 };
 
-// Generate preset options for dropdown
-export const presetOptions = Object.keys(presetData).reduce((acc, name) => {
-  acc[name] = name;
-  return acc;
-}, { '** User Preset **': '** User Preset **' });
+// ── Public API ────────────────────────────────────────────────
+export const presetNames = ['— Select —', ...Object.keys(BUILTIN), '** User Preset **'];
 
-// Load a preset by name
+export const presetOptions = Object.fromEntries(presetNames.map(n => [n, n]));
+
 export function loadPreset(name) {
-  const data = presetData[name];
+  let data = null;
+  if (BUILTIN[name]) {
+    data = JSON.parse(JSON.stringify(BUILTIN[name]));
+  } else if (name === '** User Preset **') {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { try { data = JSON.parse(raw); } catch { return false; } }
+  }
   if (!data) return false;
-  
-  if (data.canvas) applyState(canvas, data.canvas);
-  if (data.shape) applyState(shape, data.shape);
-  if (data.duplication) applyState(duplication, data.duplication);
-  if (data.transform) applyState(transform, data.transform);
-  if (data.animation) applyState(animation, data.animation);
-  if (data.split) applyState(split, data.split);
-  if (data.color) applyState(color, data.color);
-  if (data.interactive) applyState(interactive, data.interactive);
-  
+  applyState(data);
   return true;
 }
 
-// Export current settings as JSON
-export function exportPreset() {
-  return JSON.stringify({
-    canvas: cloneState(canvas),
-    shape: cloneState(shape),
-    duplication: cloneState(duplication),
-    transform: cloneState(transform),
-    animation: cloneState(animation),
-    split: cloneState(split),
-    color: cloneState(color),
-    interactive: cloneState(interactive),
-  }, null, 2);
+export function saveUserPreset() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(cloneState()));
 }
 
-// Import settings from JSON
-export function importPreset(json) {
-  try {
-    const data = JSON.parse(json);
-    
-    if (data.canvas) applyState(canvas, data.canvas);
-    if (data.shape) applyState(shape, data.shape);
-    if (data.duplication) applyState(duplication, data.duplication);
-    if (data.transform) applyState(transform, data.transform);
-    if (data.animation) applyState(animation, data.animation);
-    if (data.split) applyState(split, data.split);
-    if (data.color) applyState(color, data.color);
-    if (data.interactive) applyState(interactive, data.interactive);
-    
-    return { success: true, message: 'Preset loaded successfully' };
-  } catch (e) {
-    return { success: false, message: 'Invalid preset file: ' + e.message };
-  }
+export function exportPresetJSON() {
+  const json = JSON.stringify(cloneState(), null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'splitx-preset.json' });
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 100);
 }
 
-// Randomize settings for creative exploration
-export function randomizeSettings() {
-  const shapes = ['circle', 'square', 'triangle', 'hexagon', 'star', 'diamond'];
-  const splits = ['none', 'horizontal', 'vertical', 'four'];
-  const anims = ['none', 'noise', 'sine', 'cosine', 'combined'];
-  
-  shape.type = shapes[Math.floor(Math.random() * shapes.length)];
-  shape.size = 20 + Math.random() * 100;
-  shape.strokeWeight = 0.5 + Math.random() * 4;
-  shape.fillOpacity = Math.random() * 0.5;
-  
-  duplication.count = Math.floor(5 + Math.random() * 50);
-  duplication.spacing = 2 + Math.random() * 20;
-  duplication.spread = 100 + Math.random() * 400;
-  
-  transform.scaleMin = 0.1 + Math.random() * 0.5;
-  transform.scaleMax = 0.8 + Math.random() * 1.2;
-  transform.rotationStep = Math.floor(Math.random() * 45);
-  
-  animation.enabled = Math.random() > 0.3;
-  animation.mode = anims[Math.floor(Math.random() * anims.length)];
-  animation.speed = 0.2 + Math.random() * 1.5;
-  animation.amplitude = 20 + Math.random() * 100;
-  
-  split.mode = splits[Math.floor(Math.random() * splits.length)];
-  split.gap = Math.random() > 0.5 ? Math.floor(Math.random() * 30) : 0;
-  
-  color.useGradient = Math.random() > 0.5;
-  color.hueShift = Math.random() > 0.5;
+export function importPresetJSON(data) {
+  applyState(data);
 }

@@ -36,6 +36,9 @@ Common optional files (use as needed):
 - `shaders.js` — GLSL shader strings (used by dither, refract; these tools use p5.js WEBGL mode, not the default 2D renderer)
 - `effects.js` — post-processing or visual effects pipeline
 - `motion.js` — motion analysis / tracking logic
+- `color.js` — color utilities / palette handling
+
+Tools can also use subdirectories for sub-systems (e.g. FLAKE uses `shapes/` for shape library/SVG parsing and `export/` for export formats).
 
 **Tool registry** — `src/tools/index.js` maps tool IDs to metadata and lazy-import loaders, and exports `toolOrder` for navigation. Adding a new tool requires: adding an entry here, adding a sidebar button in `index.html`, and creating the tool directory.
 
@@ -73,9 +76,9 @@ All colors and layout dimensions are CSS variables in `styles/main.css` (e.g. `-
 
 ---
 
-## REFRACT Tool — Rebuild Reference
+## REFRACT Tool — Architecture Reference
 
-The current REFRACT implementation (`src/tools/refract/`) is a placeholder that does not match the target architecture. A full rebuild is pending. All reference data is captured here.
+The REFRACT tool (`src/tools/refract/`) has been rebuilt to match this architecture. This section documents the implemented design for reference.
 
 ### Target Architecture
 
